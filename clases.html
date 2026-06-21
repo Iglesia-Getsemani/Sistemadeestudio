@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Clases</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a2e; }
+
+  header { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  .header-back { background: transparent; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 6px; transition: background 0.15s; }
+  .header-back:hover { background: rgba(255,255,255,0.1); }
+  .header-info { flex: 1; }
+  .header-info h1 { font-size: 0.85rem; opacity: 0.7; font-weight: 400; }
+  .header-info h2 { font-size: 1.15rem; font-weight: 600; }
+  .header-actions { display: flex; gap: 0.5rem; }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 0.5rem; flex-wrap: wrap; }
+  .top-bar h2 { font-size: 1rem; font-weight: 600; color: #1a1a2e; }
+  .top-bar-right { display: flex; gap: 0.5rem; }
+
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #4338ca; }
+  .btn-ghost { background: transparent; border: 1.5px solid #d1d5db; color: #374151; }
+  .btn-ghost:hover { background: #f3f4f6; }
+  .btn-success { background: #059669; color: #fff; }
+  .btn-success:hover { background: #047857; }
+  .btn-danger-ghost { background: transparent; border: 1.5px solid #fca5a5; color: #dc2626; }
+  .btn-danger-ghost:hover { background: #fef2f2; }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+
+  .classes-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .class-card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; transition: box-shadow 0.15s, transform 0.15s; cursor: pointer; }
+  .class-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .class-num { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; color: #fff; }
+  .class-info { flex: 1; }
+  .class-name { font-size: 0.95rem; font-weight: 600; color: #1a1a2e; }
+  .class-badges { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.3rem; }
+  .badge { display: inline-block; font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: 99px; font-weight: 600; }
+  .badge-c { background: #e0e7ff; color: #3730a3; }
+  .badge-g { background: #dcfce7; color: #166534; }
+  .badge-q { background: #fef9c3; color: #854d0e; }
+  .badge-t { background: #ffe4e6; color: #9f1239; }
+  .class-actions { display: flex; gap: 0.4rem; align-items: center; }
+  .class-arrow { color: #9ca3af; font-size: 1.1rem; margin-left: 0.25rem; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: #9ca3af; }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .modal h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 1.25rem; }
+  .modal label { display: block; font-size: 0.85rem; color: #374151; margin-bottom: 0.35rem; font-weight: 500; }
+  .modal input { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.9rem; outline: none; transition: border 0.15s; }
+  .modal input:focus { border-color: #4f46e5; }
+  .form-group { margin-bottom: 1rem; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
+
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #1a1a2e; color: #fff; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.875rem; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; z-index: 200; max-width: 300px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+  <script src="_nav.js"></script>
+</head>
+<body>
+
+<header>
+  <button class="header-back" onclick="navBack()">← Volver</button>
+  <div class="header-info">
+    <h1>Asignatura</h1>
+    <h2 id="headerSubject">Clases</h2>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" id="btnExportSubject" onclick="exportSubject()" style="color:#fff; border-color:rgba(255,255,255,0.4);">📤 Exportar</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="top-bar">
+    <h2 id="clasesTitle">Clases</h2>
+    <div class="top-bar-right">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importClassFile').click()">📥 Importar</button>
+      <input type="file" id="importClassFile" accept=".json" style="display:none" onchange="importClassFromFile(event)">
+      <button class="btn btn-primary btn-sm" onclick="openNewClass()">+ Nueva Clase</button>
+    </div>
+  </div>
+  <div class="classes-list" id="classesList"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="icon">📋</div>
+    <p>No hay clases en esta asignatura.<br>Agrega la primera.</p>
+  </div>
+</div>
+
+<!-- Modal Nueva Clase -->
+<div class="modal-overlay" id="modalClass">
+  <div class="modal">
+    <h3 id="modalClassTitle">Nueva Clase</h3>
+    <div class="form-group">
+      <label>Nombre de la clase</label>
+      <input type="text" id="inputClassName" placeholder="Ej: Límites y Continuidad">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalClass')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClass()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const subjectId = params.get('s');
+
+let subjects = JSON.parse(localStorage.getItem('study_subjects') || '[]');
+let subject = subjects.find(s => s.id === subjectId);
+let editingClassId = null;
+
+if (!subject) {
+  document.getElementById('headerSubject').textContent = 'Asignatura no encontrada';
+} else {
+  document.getElementById('headerSubject').textContent = `${subject.icon} ${subject.name}`;
+  document.getElementById('clasesTitle').textContent = `Clases de ${subject.name}`;
+}
+
+function save() { localStorage.setItem('study_subjects', JSON.stringify(subjects)); }
+
+function getClassBadges(cls) {
+  const prefix = `study_${subjectId}_${cls.id}`;
+  const badges = [];
+  const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
+  let cCount = 0;
+  if (idxRaw) { try { cCount = JSON.parse(idxRaw).length; } catch {} }
+  if (cCount > 0) badges.push(`<span class="badge badge-c">📄 ${cCount} contenido${cCount>1?'s':''}</span>`);
+  if (localStorage.getItem(`${prefix}_glosario`)) badges.push('<span class="badge badge-g">📖 Glosario</span>');
+  if (localStorage.getItem(`${prefix}_cuestionario`)) badges.push('<span class="badge badge-q">✏️ Cuestionario</span>');
+  if (localStorage.getItem(`${prefix}_tematizacion`)) badges.push('<span class="badge badge-t">🗂️ Tematización</span>');
+  return badges.join('');
+}
+
+function render() {
+  const list = document.getElementById('classesList');
+  const empty = document.getElementById('emptyState');
+  if (!subject) return;
+  const classes = subject.classes || [];
+  list.innerHTML = '';
+  if (!classes.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  const color = subject.color || '#4f46e5';
+  classes.forEach((cls, i) => {
+    const item = document.createElement('div');
+    item.className = 'class-card';
+    item.innerHTML = `
+      <div class="class-num" style="background:${color};">${i + 1}</div>
+      <div class="class-info" onclick="openClass('${cls.id}')">
+        <div class="class-name">${escH(cls.name)}</div>
+        <div class="class-badges">${getClassBadges(cls)}</div>
+      </div>
+      <div class="class-actions">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); exportClass('${cls.id}')">📤</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditClass('${cls.id}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); deleteClass('${cls.id}')">🗑️</button>
+      </div>
+      <span class="class-arrow" onclick="openClass('${cls.id}')">›</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function openClass(classId) {
+  navTo(`tematizacion.html?s=${subjectId}&c=${classId}`);
+}
+
+// ── Class CRUD ────────────────────────────────────────────────────
+function openNewClass() {
+  editingClassId = null;
+  document.getElementById('inputClassName').value = '';
+  document.getElementById('modalClassTitle').textContent = 'Nueva Clase';
+  openModal('modalClass');
+}
+function openEditClass(id) {
+  editingClassId = id;
+  const cls = subject.classes.find(c => c.id === id);
+  document.getElementById('inputClassName').value = cls ? cls.name : '';
+  document.getElementById('modalClassTitle').textContent = 'Editar Clase';
+  openModal('modalClass');
+}
+function saveClass() {
+  const name = document.getElementById('inputClassName').value.trim();
+  if (!name) return alert('Escribe un nombre para la clase.');
+  if (editingClassId) {
+    const cls = subject.classes.find(c => c.id === editingClassId);
+    if (cls) cls.name = name;
+  } else {
+    if (!subject.classes) subject.classes = [];
+    subject.classes.push({ id: Date.now().toString(), name });
+  }
+  save(); render(); closeModal('modalClass');
+}
+function deleteClass(id) {
+  if (!confirm('¿Eliminar esta clase y todos sus datos?')) return;
+  // Limpiar localStorage
+  const prefix = `study_${subjectId}_${id}`;
+  ['glosario','cuestionario','tematizacion'].forEach(t => localStorage.removeItem(`${prefix}_${t}`));
+  const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
+  if (idxRaw) {
+    try { JSON.parse(idxRaw).forEach(item => localStorage.removeItem(`${prefix}_contenido_${item.id}`)); } catch {}
+    localStorage.removeItem(`${prefix}_contenidos_index`);
+  }
+  subject.classes = subject.classes.filter(c => c.id !== id);
+  save(); render();
+}
+
+// ── Export ────────────────────────────────────────────────────────
+function exportSubject() {
+  if (!subject) return;
+  const payload = buildExportPayload([subject]);
+  downloadJSON(payload, `asignatura_${slugify(subject.name)}.json`);
+  showToast(`📤 "${subject.name}" exportada completa`);
+}
+
+function exportClass(classId) {
+  const cls = subject.classes.find(c => c.id === classId);
+  if (!cls) return;
+  const sExp = { id: subject.id, name: subject.name, icon: subject.icon, color: subject.color, classes: [] };
+  const prefix = `study_${subjectId}_${classId}`;
+  const clsExp = { id: cls.id, name: cls.name, data: {} };
+  ['glosario','cuestionario','tematizacion'].forEach(t => {
+    const raw = localStorage.getItem(`${prefix}_${t}`);
+    if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
+  });
+  const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
+  if (idxRaw) {
+    try {
+      const idx = JSON.parse(idxRaw);
+      clsExp.data.contenidos_index = idx;
+      clsExp.data.contenidos_items = {};
+      idx.forEach(item => {
+        const d = localStorage.getItem(`${prefix}_contenido_${item.id}`);
+        if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
+      });
+    } catch {}
+  }
+  sExp.classes.push(clsExp);
+  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [sExp] };
+  downloadJSON(payload, `clase_${slugify(cls.name)}.json`);
+  showToast(`📤 "${cls.name}" exportada`);
+}
+
+function buildExportPayload(subjectList) {
+  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [] };
+  subjectList.forEach(s => {
+    const sExp = { id: s.id, name: s.name, icon: s.icon, color: s.color, classes: [] };
+    (s.classes || []).forEach(cls => {
+      const prefix = `study_${s.id}_${cls.id}`;
+      const clsExp = { id: cls.id, name: cls.name, data: {} };
+      ['glosario','cuestionario','tematizacion'].forEach(t => {
+        const raw = localStorage.getItem(`${prefix}_${t}`);
+        if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
+      });
+      const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
+      if (idxRaw) {
+        try {
+          const idx = JSON.parse(idxRaw);
+          clsExp.data.contenidos_index = idx;
+          clsExp.data.contenidos_items = {};
+          idx.forEach(item => {
+            const d = localStorage.getItem(`${prefix}_contenido_${item.id}`);
+            if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
+          });
+        } catch {}
+      }
+      sExp.classes.push(clsExp);
+    });
+    payload.subjects.push(sExp);
+  });
+  return payload;
+}
+
+// ── Import ────────────────────────────────────────────────────────
+function importClassFromFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (payload.type !== 'study_export' || !Array.isArray(payload.subjects)) {
+        return alert('Archivo inválido: no es un export de estudio.');
+      }
+      let imported = 0;
+      payload.subjects.forEach(s => {
+        (s.classes || []).forEach(cls => {
+          // Generar nuevo id para evitar colisiones
+          const newId = Date.now().toString() + Math.random().toString(36).slice(2,6);
+          const newCls = { id: newId, name: cls.name };
+          if (!subject.classes) subject.classes = [];
+          subject.classes.push(newCls);
+
+          // Restaurar datos en localStorage con nuevo prefijo
+          const prefix = `study_${subjectId}_${newId}`;
+          const data = cls.data || {};
+          ['glosario','cuestionario','tematizacion'].forEach(t => {
+            if (data[t] !== undefined) localStorage.setItem(`${prefix}_${t}`, JSON.stringify(data[t]));
+          });
+          if (data.contenidos_index) {
+            localStorage.setItem(`${prefix}_contenidos_index`, JSON.stringify(data.contenidos_index));
+            const items = data.contenidos_items || {};
+            Object.keys(items).forEach(itemId => {
+              localStorage.setItem(`${prefix}_contenido_${itemId}`, JSON.stringify(items[itemId]));
+            });
+          }
+          imported++;
+        });
+      });
+      save(); render();
+      showToast(`📥 ${imported} clase${imported !== 1 ? 's' : ''} importada${imported !== 1 ? 's' : ''} correctamente`);
+    } catch (err) {
+      alert('Error al leer el archivo: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function slugify(str) { return str.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''); }
+
+// ── Helpers ───────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+render();
+</script>
+</body>
+</html>

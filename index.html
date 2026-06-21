@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Sistema de Estudio</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a2e; }
+
+  header { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  header h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: 0.5px; flex: 1; }
+  header span.logo { font-size: 1.5rem; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 0.75rem; flex-wrap: wrap; }
+  .top-bar h2 { font-size: 1.1rem; font-weight: 600; color: #1a1a2e; }
+  .top-bar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #4338ca; }
+  .btn-ghost { background: transparent; border: 1.5px solid #d1d5db; color: #374151; }
+  .btn-ghost:hover { background: #f3f4f6; }
+  .btn-success { background: #059669; color: #fff; }
+  .btn-success:hover { background: #047857; }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+
+  .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+
+  .subject-card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
+  .subject-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.12); transform: translateY(-2px); }
+  .subject-body { padding: 1.35rem 1.25rem; display: flex; align-items: center; gap: 1rem; }
+  .subject-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; }
+  .subject-name { font-weight: 600; font-size: 1.05rem; }
+  .subject-meta { font-size: 0.78rem; color: #6b7280; margin-top: 3px; }
+  .subject-arrow { margin-left: auto; color: #9ca3af; font-size: 1.1rem; }
+  .subject-card-footer { padding: 0.6rem 1.25rem; border-top: 1px solid #f3f4f6; display: flex; justify-content: flex-end; gap: 0.4rem; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: #9ca3af; }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .empty-state p { font-size: 0.95rem; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .modal h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 1.25rem; }
+  .modal label { display: block; font-size: 0.85rem; color: #374151; margin-bottom: 0.35rem; font-weight: 500; }
+  .modal input { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.9rem; outline: none; transition: border 0.15s; }
+  .modal input:focus { border-color: #4f46e5; }
+  .modal .form-group { margin-bottom: 1rem; }
+  .modal .emojis { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.35rem; }
+  .modal .emojis span { cursor: pointer; font-size: 1.3rem; padding: 0.2rem 0.3rem; border-radius: 6px; border: 2px solid transparent; transition: border 0.1s; }
+  .modal .emojis span.selected { border-color: #4f46e5; background: #e0e7ff; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
+  .colors-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.35rem; }
+  .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border 0.1s; }
+  .color-dot.selected { border-color: #1a1a2e; }
+
+  /* Import modal */
+  .import-drop { border: 2px dashed #d1d5db; border-radius: 10px; padding: 1.75rem 1rem; text-align: center; transition: all 0.2s; cursor: pointer; }
+  .import-drop:hover, .import-drop.dragover { border-color: #4f46e5; background: #f5f3ff; }
+  .import-drop .dz-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .import-drop .dz-text { font-size: 0.9rem; color: #374151; font-weight: 500; }
+  .import-drop .dz-sub { font-size: 0.78rem; color: #9ca3af; margin-top: 0.3rem; }
+  .import-status { margin-top: 0.75rem; font-size: 0.82rem; min-height: 1.2rem; }
+
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #1a1a2e; color: #fff; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.875rem; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; z-index: 200; max-width: 300px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+  <script src="_nav.js"></script>
+</head>
+<body>
+
+<header>
+  <span class="logo">📚</span>
+  <h1>Sistema de Estudio</h1>
+</header>
+
+<div class="container">
+  <div class="top-bar">
+    <h2>Mis Asignaturas</h2>
+    <div class="top-bar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openImport()">📥 Importar</button>
+      <button class="btn btn-primary" onclick="openNewSubject()">+ Nueva Asignatura</button>
+    </div>
+  </div>
+
+  <div class="subjects-grid" id="subjectsGrid"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="icon">🎓</div>
+    <p>No tienes asignaturas todavía.<br>Crea una para comenzar.</p>
+  </div>
+</div>
+
+<!-- Modal Nueva/Editar Asignatura -->
+<div class="modal-overlay" id="modalSubject">
+  <div class="modal">
+    <h3 id="modalSubjectTitle">Nueva Asignatura</h3>
+    <div class="form-group">
+      <label>Nombre</label>
+      <input type="text" id="inputSubjectName" placeholder="Ej: Cálculo Diferencial">
+    </div>
+    <div class="form-group">
+      <label>Ícono</label>
+      <div class="emojis" id="emojiPicker"></div>
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <div class="colors-row" id="colorPicker"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalSubject')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSubject()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Importar -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal">
+    <h3>📥 Importar datos</h3>
+    <div class="import-drop" id="importDrop" onclick="document.getElementById('importFileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="onImportDrop(event)">
+      <div class="dz-icon">📂</div>
+      <div class="dz-text">Selecciona o arrastra un archivo .json</div>
+      <div class="dz-sub">Exportado desde el Sistema de Estudio</div>
+      <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="onImportFile(this)">
+    </div>
+    <div class="import-status" id="importStatus"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalImport')">Cancelar</button>
+      <button class="btn btn-success" id="btnDoImport" onclick="doImport()" style="display:none">✅ Importar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EMOJIS = ['📘','📗','📙','📕','🔬','🧮','🎨','🖥️','📐','⚗️','🧬','🌍','📊','🎭','🏛️','🔭','⚖️','🎵','🏋️','💡'];
+const COLORS = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#1a1a2e','#374151','#0f766e'];
+
+let subjects = JSON.parse(localStorage.getItem('study_subjects') || '[]');
+let editingSubjectId = null;
+let selectedEmoji = EMOJIS[0];
+let selectedColor = COLORS[0];
+let importPayload = null;
+
+function save() { localStorage.setItem('study_subjects', JSON.stringify(subjects)); }
+
+function render() {
+  const grid = document.getElementById('subjectsGrid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+  if (!subjects.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  subjects.forEach(s => {
+    const classCount = (s.classes || []).length;
+    const card = document.createElement('div');
+    card.className = 'subject-card';
+    card.innerHTML = `
+      <div class="subject-body" onclick="openSubject('${s.id}')">
+        <div class="subject-icon" style="background:${s.color}22;">${s.icon}</div>
+        <div>
+          <div class="subject-name">${escH(s.name)}</div>
+          <div class="subject-meta">${classCount} clase${classCount !== 1 ? 's' : ''}</div>
+        </div>
+        <span class="subject-arrow">›</span>
+      </div>
+      <div class="subject-card-footer">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); exportSubject('${s.id}')">📤 Exportar</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditSubject('${s.id}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); deleteSubject('${s.id}')">🗑️</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function openSubject(id) {
+  navTo(`clases.html?s=${id}`);
+}
+
+// ── Emoji / color pickers ─────────────────────────────────────────
+function buildEmojiPicker() {
+  document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
+    `<span onclick="selectEmoji(this,'${e}')" class="${e===selectedEmoji?'selected':''}">${e}</span>`
+  ).join('');
+}
+function buildColorPicker() {
+  document.getElementById('colorPicker').innerHTML = COLORS.map(c =>
+    `<div class="color-dot${c===selectedColor?' selected':''}" style="background:${c};" onclick="selectColor(this,'${c}')"></div>`
+  ).join('');
+}
+function selectEmoji(el, e) {
+  selectedEmoji = e;
+  document.querySelectorAll('#emojiPicker span').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selectColor(el, c) {
+  selectedColor = c;
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── Subject CRUD ──────────────────────────────────────────────────
+function openNewSubject() {
+  editingSubjectId = null;
+  selectedEmoji = EMOJIS[0]; selectedColor = COLORS[0];
+  document.getElementById('inputSubjectName').value = '';
+  document.getElementById('modalSubjectTitle').textContent = 'Nueva Asignatura';
+  buildEmojiPicker(); buildColorPicker();
+  openModal('modalSubject');
+}
+function openEditSubject(id) {
+  const s = subjects.find(x => x.id === id);
+  if (!s) return;
+  editingSubjectId = id;
+  selectedEmoji = s.icon; selectedColor = s.color;
+  document.getElementById('inputSubjectName').value = s.name;
+  document.getElementById('modalSubjectTitle').textContent = 'Editar Asignatura';
+  buildEmojiPicker(); buildColorPicker();
+  openModal('modalSubject');
+}
+function saveSubject() {
+  const name = document.getElementById('inputSubjectName').value.trim();
+  if (!name) return alert('Escribe un nombre para la asignatura.');
+  if (editingSubjectId) {
+    const s = subjects.find(x => x.id === editingSubjectId);
+    s.name = name; s.icon = selectedEmoji; s.color = selectedColor;
+  } else {
+    subjects.push({ id: Date.now().toString(), name, icon: selectedEmoji, color: selectedColor, classes: [] });
+  }
+  save(); render(); closeModal('modalSubject');
+}
+function deleteSubject(id) {
+  if (!confirm('¿Eliminar esta asignatura y todas sus clases?')) return;
+  subjects = subjects.filter(s => s.id !== id);
+  save(); render();
+}
+
+// ── Export ────────────────────────────────────────────────────────
+function exportSubject(subjectId) {
+  const s = subjects.find(x => x.id === subjectId);
+  if (!s) return;
+  const payload = buildExportPayload([s]);
+  downloadJSON(payload, `asignatura_${slugify(s.name)}.json`);
+  showToast(`📤 "${s.name}" exportada`);
+}
+
+function buildExportPayload(subjectList) {
+  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [] };
+  subjectList.forEach(s => {
+    const sExp = { id: s.id, name: s.name, icon: s.icon, color: s.color, classes: [] };
+    (s.classes || []).forEach(cls => {
+      const prefix = `study_${s.id}_${cls.id}`;
+      const clsExp = { id: cls.id, name: cls.name, data: {} };
+      // Single-type keys
+      ['glosario','cuestionario','tematizacion'].forEach(t => {
+        const raw = localStorage.getItem(`${prefix}_${t}`);
+        if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
+      });
+      // Multi contenidos
+      const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
+      if (idxRaw) {
+        try {
+          const idx = JSON.parse(idxRaw);
+          clsExp.data.contenidos_index = idx;
+          clsExp.data.contenidos_items = {};
+          idx.forEach(item => {
+            const d = localStorage.getItem(`${prefix}_contenido_${item.id}`);
+            if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
+          });
+        } catch {}
+      }
+      sExp.classes.push(clsExp);
+    });
+    payload.subjects.push(sExp);
+  });
+  return payload;
+}
+
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function slugify(str) { return str.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''); }
+
+// ── Import ────────────────────────────────────────────────────────
+function openImport() { importPayload = null; document.getElementById('importStatus').textContent = ''; document.getElementById('btnDoImport').style.display = 'none'; openModal('modalImport'); }
+function onImportDrop(e) { e.preventDefault(); document.getElementById('importDrop').classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) readImportFile(f); }
+function onImportFile(input) { if (input.files[0]) readImportFile(input.files[0]); }
+function readImportFile(file) {
+  const st = document.getElementById('importStatus');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.subjects || !Array.isArray(data.subjects)) throw new Error('Formato no reconocido');
+      importPayload = data;
+      const totalClases = data.subjects.reduce((a,s) => a + (s.classes||[]).length, 0);
+      st.textContent = `✅ ${data.subjects.length} asignatura(s) · ${totalClases} clase(s) listas para importar`;
+      st.style.color = '#166534';
+      document.getElementById('btnDoImport').style.display = 'inline-flex';
+    } catch(err) {
+      st.textContent = `❌ Archivo inválido: ${err.message}`;
+      st.style.color = '#dc2626';
+      importPayload = null;
+      document.getElementById('btnDoImport').style.display = 'none';
+    }
+  };
+  reader.readAsText(file);
+}
+function doImport() {
+  if (!importPayload) return;
+  let added = 0, skipped = 0;
+  importPayload.subjects.forEach(s => {
+    const exists = subjects.find(x => x.id === s.id);
+    if (exists) { skipped++; return; }
+    // Restaurar localStorage de cada clase
+    (s.classes || []).forEach(cls => {
+      const prefix = `study_${s.id}_${cls.id}`;
+      const d = cls.data || {};
+      ['glosario','cuestionario','tematizacion'].forEach(t => {
+        if (d[t]) localStorage.setItem(`${prefix}_${t}`, JSON.stringify(d[t]));
+      });
+      if (d.contenidos_index) {
+        localStorage.setItem(`${prefix}_contenidos_index`, JSON.stringify(d.contenidos_index));
+        Object.entries(d.contenidos_items || {}).forEach(([id, val]) => {
+          localStorage.setItem(`${prefix}_contenido_${id}`, JSON.stringify(val));
+        });
+      }
+    });
+    subjects.push({ id: s.id, name: s.name, icon: s.icon, color: s.color, classes: s.classes.map(c => ({ id: c.id, name: c.name })) });
+    added++;
+  });
+  save(); render(); closeModal('modalImport');
+  showToast(`✅ ${added} importada(s)${skipped ? `, ${skipped} ya existían` : ''}`);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+sessionStorage.removeItem('__navStack');
+render();
+</script>
+</body>
+</html>
