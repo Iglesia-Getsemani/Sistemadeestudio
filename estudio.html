@@ -169,6 +169,22 @@ header {
 .mode-btn:hover { border-color: #4f46e5; color: #4f46e5; }
 .mode-btn.active { border-color: #4f46e5; background: #eef2ff; color: #4f46e5; }
 
+/* ── GLOSARIO SELECTOR (cuando hay varios glosarios cargados) ── */
+.glos-screen-intro { padding: 1rem 0.75rem 0.5rem; font-size: 0.9rem; color: #6b7280; text-align: center; }
+.glos-list { display: flex; flex-direction: column; gap: 0.6rem; padding: 0 0.75rem 1rem; }
+.glos-card {
+  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;
+  cursor: pointer; transition: all 0.15s;
+}
+.glos-card:hover { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.08); }
+.glos-card.glos-all { border-color: #4f46e5; background: #eef2ff; }
+.glos-icon { font-size: 1.5rem; flex-shrink: 0; }
+.glos-info { flex: 1; }
+.glos-name { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; }
+.glos-sub { font-size: 0.78rem; color: #6b7280; margin-top: 2px; }
+.glos-arrow { color: #9ca3af; font-size: 1rem; }
+
 /* ── COMPLETED ── */
 .completed-wrap {
   display: flex; flex-direction: column; align-items: center;
@@ -230,9 +246,16 @@ header {
     <button class="header-back" id="btnBack">← Volver</button>
     <span class="header-title" id="headerTitle">Estudiar Glosario</span>
     <div class="header-tools">
+      <button class="tool-btn" id="btnChangeGlosario" title="Cambiar glosario" style="display:none" onclick="backToSelector()">📚 Cambiar</button>
       <button class="tool-btn" id="btnEnd" title="Terminar sesión">⏹</button>
     </div>
   </header>
+
+  <!-- GLOSARIO SELECT (shown only if there are 2+ glosarios loaded for this class) -->
+  <div id="glosarioScreen" style="display:none">
+    <div class="glos-screen-intro">¿Qué glosario quieres estudiar?</div>
+    <div class="glos-list" id="glosarioList"></div>
+  </div>
 
   <!-- MODE SELECT (shown before game starts) -->
   <div id="modeScreen" style="display:none">
@@ -339,12 +362,17 @@ header {
 </div><!-- #app -->
 
 <script src="_nav.js" onerror="void 0"></script>
+<script src="cordova.js" onerror="void 0"></script>
+<script src="_share.js" onerror="void 0"></script>
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────
-const params    = new URLSearchParams(location.search);
-const subjectId = params.get('s');
-const classId   = params.get('c');
-const KEY       = `study_${subjectId}_${classId}_glosario`;
+const params     = new URLSearchParams(location.search);
+const subjectId   = params.get('s');
+const classId     = params.get('c');
+const gidParam    = params.get('gid');
+const KEY_PREFIX  = `study_${subjectId}_${classId}`;
+const LEGACY_KEY  = `${KEY_PREFIX}_glosario`;
+const INDEX_KEY   = `${KEY_PREFIX}_glosarios_index`;
 
 // ── LETTER COLORS (from dart) ────────────────────────────────────────────
 const LETTER_COLORS = {
@@ -399,6 +427,10 @@ let timerStart    = 0;
 let colorize      = false;
 let compress      = false;
 let studyMode     = 'study'; // 'study' = def→term | 'inverso' = term→def
+let glosarioIndex = [];      // [{id, name}] de todos los glosarios cargados en la clase
+let multiSourceMode = false; // true si se combinaron 2+ glosarios en una sesión
+let selectedGlosarioNames = [];
+let baseHeaderTitle = 'Estudiar Glosario';
 
 // ── HELPERS ──────────────────────────────────────────────────────────────
 function shuffle(arr) {
@@ -449,48 +481,157 @@ function escH(s) {
 }
 
 // ── LOAD ─────────────────────────────────────────────────────────────────
+function loadIndexList() {
+  try { return JSON.parse(localStorage.getItem(INDEX_KEY) || '[]'); } catch { return []; }
+}
+
+function parseGlosarioRaw(raw) {
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw);
+    return (data.glosario || data || []).filter(t => t.termino && t.definicion);
+  } catch { return null; }
+}
+
+function readGlosarioById(id) {
+  return parseGlosarioRaw(localStorage.getItem(`${KEY_PREFIX}_glosario_${id}`));
+}
+
+function readLegacyGlosario() {
+  return parseGlosarioRaw(localStorage.getItem(LEGACY_KEY));
+}
+
 function init() {
   // header meta
   try {
     const subjects = JSON.parse(localStorage.getItem('study_subjects') || '[]');
     const subject  = subjects.find(s => s.id === subjectId);
     const cls      = subject?.classes?.find(c => c.id === classId);
-    document.getElementById('headerTitle').textContent =
-      cls ? cls.name : 'Estudiar Glosario';
+    baseHeaderTitle = cls ? cls.name : 'Estudiar Glosario';
+    document.getElementById('headerTitle').textContent = baseHeaderTitle;
   } catch(e){}
 
-  const raw = localStorage.getItem(KEY);
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('app').style.display = '';
+  bindButtons();
 
-  if (!raw) {
-    document.getElementById('modeError').textContent =
-      '⚠️ No hay glosario cargado para esta clase. Vuelve y carga el JSON de glosario.';
-    document.getElementById('modeError').style.display = '';
-    document.getElementById('modeScreen').style.display = '';
+  glosarioIndex = loadIndexList();
+
+  // 1) Enlace directo a un glosario específico (?gid=...)
+  if (gidParam) {
+    const terms = readGlosarioById(gidParam);
+    if (!terms) { showLoadError(); return; }
+    const item = glosarioIndex.find(i => i.id === gidParam);
+    finalizeSelection([{ id: gidParam, name: item ? item.name : 'Glosario', terms }]);
     return;
   }
 
-  try {
-    const data = JSON.parse(raw);
-    allTerms = (data.glosario || data || []).filter(t => t.termino && t.definicion);
-    totalTerms = allTerms.length;
-  } catch(e) {
-    document.getElementById('modeError').textContent = '❌ El JSON de glosario no es válido.';
-    document.getElementById('modeError').style.display = '';
-    document.getElementById('modeScreen').style.display = '';
+  // 2) Sin sistema multi-glosario (formato antiguo) → usar la clave heredada
+  if (!glosarioIndex.length) {
+    const terms = readLegacyGlosario();
+    if (!terms) { showLoadError(); return; }
+    finalizeSelection([{ id: null, name: null, terms }]);
     return;
   }
+
+  // 3) Un solo glosario cargado → usarlo directamente, sin pedir nada
+  if (glosarioIndex.length === 1) {
+    const only  = glosarioIndex[0];
+    const terms = readGlosarioById(only.id);
+    if (!terms) { showLoadError(); return; }
+    finalizeSelection([{ id: only.id, name: only.name, terms }]);
+    return;
+  }
+
+  // 4) Varios glosarios cargados → preguntar cuál(es) estudiar
+  showGlosarioSelector();
+}
+
+function showLoadError(msg) {
+  document.getElementById('modeError').textContent =
+    msg || '⚠️ No hay glosario cargado para esta clase. Vuelve y carga el JSON de glosario.';
+  document.getElementById('modeError').style.display = '';
+  document.getElementById('glosarioScreen').style.display = 'none';
+  document.getElementById('modeScreen').style.display = '';
+}
+
+function showGlosarioSelector() {
+  const wrap = document.getElementById('glosarioList');
+  const cards = glosarioIndex.map(item => {
+    const n = (readGlosarioById(item.id) || []).length;
+    return `<div class="glos-card" data-id="${item.id}">
+      <span class="glos-icon">📖</span>
+      <div class="glos-info">
+        <div class="glos-name">${escH(item.name)}</div>
+        <div class="glos-sub">${n} término${n !== 1 ? 's' : ''}</div>
+      </div>
+      <span class="glos-arrow">›</span>
+    </div>`;
+  }).join('');
+  const allCard = `<div class="glos-card glos-all" data-id="__all__">
+    <span class="glos-icon">📚</span>
+    <div class="glos-info">
+      <div class="glos-name">Todos los glosarios</div>
+      <div class="glos-sub">Combina los ${glosarioIndex.length} glosarios en una sola sesión</div>
+    </div>
+    <span class="glos-arrow">›</span>
+  </div>`;
+  wrap.innerHTML = allCard + cards;
+
+  document.getElementById('modeScreen').style.display = 'none';
+  document.getElementById('modeError').style.display = 'none';
+  document.getElementById('glosarioScreen').style.display = '';
+}
+
+function pickGlosario(id) {
+  document.getElementById('glosarioScreen').style.display = 'none';
+  if (id === '__all__') {
+    const sources = glosarioIndex.map(item => ({ id: item.id, name: item.name, terms: readGlosarioById(item.id) || [] }));
+    finalizeSelection(sources);
+  } else {
+    const item = glosarioIndex.find(i => i.id === id);
+    finalizeSelection([{ id, name: item ? item.name : 'Glosario', terms: readGlosarioById(id) || [] }]);
+  }
+}
+
+function backToSelector() {
+  document.getElementById('modeScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('completedScreen').style.display = 'none';
+  document.getElementById('modeError').style.display = 'none';
+  showGlosarioSelector();
+}
+
+function finalizeSelection(sources) {
+  multiSourceMode = sources.length > 1;
+  selectedGlosarioNames = sources.map(s => s.name).filter(Boolean);
+
+  allTerms = [];
+  sources.forEach(src => {
+    (src.terms || []).forEach(t => {
+      allTerms.push(src.name ? { ...t, _glosario: src.name } : t);
+    });
+  });
+  totalTerms = allTerms.length;
+
+  document.getElementById('btnChangeGlosario').style.display = glosarioIndex.length > 1 ? '' : 'none';
 
   if (!allTerms.length) {
-    document.getElementById('modeError').textContent = '⚠️ El glosario no tiene términos con definición.';
-    document.getElementById('modeError').style.display = '';
-    document.getElementById('modeScreen').style.display = '';
+    showLoadError('⚠️ El glosario no tiene términos con definición.');
     return;
   }
 
+  updateHeaderSubtitle();
+  document.getElementById('modeError').style.display = 'none';
+  document.getElementById('glosarioScreen').style.display = 'none';
   document.getElementById('modeScreen').style.display = '';
-  bindButtons();
+}
+
+function updateHeaderSubtitle() {
+  let extra = '';
+  if (multiSourceMode) extra = ' · Todos los glosarios';
+  else if (selectedGlosarioNames.length === 1 && glosarioIndex.length > 1) extra = ` · ${selectedGlosarioNames[0]}`;
+  document.getElementById('headerTitle').textContent = baseHeaderTitle + extra;
 }
 
 function bindButtons() {
@@ -512,6 +653,14 @@ function bindButtons() {
     const card = e.target.closest('.option-card');
     if (card && card.dataset.index !== undefined) {
       selectOption(parseInt(card.dataset.index, 10));
+    }
+  });
+
+  // Delegación para las tarjetas de selección de glosario
+  document.getElementById('glosarioList').addEventListener('click', (e) => {
+    const card = e.target.closest('.glos-card');
+    if (card && card.dataset.id !== undefined) {
+      pickGlosario(card.dataset.id);
     }
   });
 }
@@ -588,9 +737,11 @@ function refreshMainText() {
   const label = studyMode==='study' ? 'Definición' : 'Término';
   document.getElementById('cardLabel').textContent = label;
   document.getElementById('mainText').innerHTML    = buildColoredHTML(text);
-  document.getElementById('cardMeta').textContent  =
-    (currentTerm.grupo ? currentTerm.grupo + ' · ' : '') +
-    `Ronda ${currentRound}`;
+  const metaParts = [];
+  if (multiSourceMode && currentTerm._glosario) metaParts.push(currentTerm._glosario);
+  if (currentTerm.grupo) metaParts.push(currentTerm.grupo);
+  metaParts.push(`Ronda ${currentRound}`);
+  document.getElementById('cardMeta').textContent = metaParts.join(' · ');
 }
 
 function refreshOptions() {
@@ -711,6 +862,24 @@ function showCompleted() {
   const el  = document.getElementById('cAcc');
   el.textContent = totalCount ? acc+'%' : '—';
   el.style.color = acc>=80 ? '#16a34a' : acc>=60 ? '#d97706' : '#dc2626';
+
+  // Guardar historial de sesión en localStorage
+  try {
+    const histKey = `${KEY_PREFIX}_glosario_history`;
+    const history = JSON.parse(localStorage.getItem(histKey) || '[]');
+    history.push({
+      timestamp: Date.now(),
+      glosarioNames: selectedGlosarioNames.length ? selectedGlosarioNames : ['Glosario'],
+      multiSource: multiSourceMode,
+      totalTerms,
+      correctCount,
+      wrongCount,
+      totalAnswers: totalCount,
+      accuracy: acc
+    });
+    if (history.length > 100) history.splice(0, history.length - 100);
+    localStorage.setItem(histKey, JSON.stringify(history));
+  } catch(e) {}
 }
 
 function resetSession() {

@@ -33,7 +33,6 @@
     display: flex; align-items: center; gap: 0.4rem;
   }
 
-  /* === PHASE: READING === */
   .phase-reading {
     min-height: 100vh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -71,14 +70,12 @@
   }
   .btn-show-options:hover { background: #ffa333; transform: translateY(-1px); }
 
-  /* === PHASE: ANSWERING === */
   .phase-answering {
     min-height: 100vh;
     display: flex; flex-direction: column;
     max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 6rem;
   }
 
-  /* Timer bar */
   .timer-section {
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.08);
@@ -87,16 +84,15 @@
   }
   .timer-display {
     font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums;
-    color: #ff8906; min-width: 72px; letter-spacing: 1px;
+    color: #ff8906; min-width: 95px; letter-spacing: 1px;
   }
   .timer-display.warning { color: #ef4444; animation: pulse 0.8s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
   .timer-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
-  .timer-bar { height: 100%; background: #ff8906; border-radius: 99px; transition: width 1s linear, background 0.3s; }
+  .timer-bar { height: 100%; background: #ff8906; border-radius: 99px; transition: width 0.5s linear, background 0.3s; }
   .timer-bar.warning { background: #ef4444; }
   .timer-label { font-size: 0.72rem; color: rgba(255,255,255,0.4); white-space: nowrap; }
 
-  /* Progress dots */
   .progress-dots {
     display: flex; gap: 0.35rem; margin-bottom: 1.5rem; flex-wrap: wrap;
   }
@@ -108,7 +104,6 @@
   .dot.correct { background: #22c55e; }
   .dot.incorrect { background: #ef4444; }
 
-  /* Question card */
   .q-card {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.09);
@@ -125,7 +120,6 @@
   .badge-txt { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.25); }
   .q-text { font-size: 0.95rem; font-weight: 500; line-height: 1.55; color: #fffffe; }
 
-  /* Options */
   .options-list { padding: 1rem 1.25rem 1.25rem; display: grid; gap: 0.5rem; }
   .option {
     display: flex; align-items: flex-start; gap: 0.75rem;
@@ -148,7 +142,6 @@
   .option.disabled { cursor: default; }
   .option-icon { margin-left: auto; font-size: 0.9rem; flex-shrink: 0; }
 
-  /* Text input */
   .text-input-wrap { padding: 1rem 1.25rem 1.25rem; }
   .text-input-wrap input {
     width: 100%; padding: 0.7rem 1rem;
@@ -162,7 +155,6 @@
   .text-input-wrap input.correct { border-color: #22c55e; background: rgba(34,197,94,0.08); }
   .text-input-wrap input.incorrect { border-color: #ef4444; background: rgba(239,68,68,0.08); }
 
-  /* Justification */
   .justification {
     margin: 0 1.25rem 1.25rem; padding: 0.85rem 1rem;
     border-radius: 10px; font-size: 0.85rem; line-height: 1.6;
@@ -175,7 +167,6 @@
   .justification.incorrect { background: rgba(239,68,68,0.08); border-color: #ef4444; color: #fca5a5; }
   .just-label { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; opacity: 0.7; }
 
-  /* Time taken badge */
   .time-badge {
     display: inline-flex; align-items: center; gap: 0.3rem;
     font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem;
@@ -184,7 +175,6 @@
     margin-left: auto;
   }
 
-  /* Buttons */
   .q-footer { padding: 0 1.25rem 1.25rem; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
   .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 600; transition: all 0.15s; }
   .btn-primary { background: #ff8906; color: #0f0e17; }
@@ -195,7 +185,6 @@
   .btn-ghost:hover { background: rgba(255,255,255,0.06); color: #fff; }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
 
-  /* Result screen */
   .result-screen {
     min-height: 100vh; display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -222,12 +211,13 @@
 
   .error-box { max-width: 500px; margin: 3rem auto; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 1.5rem; text-align: center; color: #fca5a5; }
 
-  /* Review mode */
   .review-container { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .review-top { margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
   .review-title { font-size: 1rem; font-weight: 700; }
 </style>
   <script src="_nav.js"></script>
+  <script src="cordova.js" onerror="void 0"></script>
+  <script src="_share.js" onerror="void 0"></script>
 </head>
 <body>
 
@@ -238,7 +228,7 @@
     <h2 id="headerClass">Evaluación</h2>
   </div>
   <div class="header-timer" id="headerTimer" style="display:none">
-    ⏱ <span id="headerTimerVal">0:00</span>
+    🕐 <span id="headerTimerVal">0:00.00</span>
   </div>
 </header>
 
@@ -248,26 +238,159 @@
 const params = new URLSearchParams(location.search);
 const subjectId = params.get('s');
 const classId = params.get('c');
-const KEY = `study_${subjectId}_${classId}_cuestionario`;
+const qid = params.get('qid');
+const KEY_PREFIX = `study_${subjectId}_${classId}`;
+const KEY = qid ? `${KEY_PREFIX}_cuestionario_${qid}` : `${KEY_PREFIX}_cuestionario`;
 
 const subjects = JSON.parse(localStorage.getItem('study_subjects') || '[]');
 const subject = subjects.find(s => s.id === subjectId);
 const cls = subject?.classes?.find(c => c.id === classId);
+
+let cuestionarioName = null;
+if (qid) {
+  try {
+    const idx = JSON.parse(localStorage.getItem(`${KEY_PREFIX}_cuestionarios_index`) || '[]');
+    const item = idx.find(i => i.id === qid);
+    if (item) cuestionarioName = item.name;
+  } catch {}
+}
+
 document.getElementById('headerSub').textContent = cls ? cls.name : 'Clase';
-document.getElementById('headerClass').textContent = subject ? `${subject.icon} ${subject.name}` : 'Cuestionario';
+document.getElementById('headerClass').textContent = cuestionarioName
+  ? `${subject ? subject.icon + ' ' : ''}${cuestionarioName}`
+  : (subject ? `${subject.icon} ${subject.name}` : 'Cuestionario');
 
 const raw = localStorage.getItem(KEY);
 const root = document.getElementById('appRoot');
 
 let questions = [];
 let currentIdx = 0;
-let phase = 'reading'; // 'reading' | 'answering' | 'feedback'
+let phase = 'reading';
 let userAnswers = {};
-let answered = {}; // { idx: { correct, timeSec } }
-let timerInterval = null;
-let timerSeconds = 0;
-let timerMax = 60; // seconds shown in bar
+let answered = {};
+let quizCompleted = false;
 
+/* ── TIMER (milisegundos) ── */
+let timerStartMs = 0;
+let timerElapsedMs = 0;
+let timerInterval = null;
+const timerMaxMs = 60000;
+
+function startTimer() {
+  stopTimer();
+  timerStartMs = Date.now();
+  timerElapsedMs = 0;
+  timerInterval = setInterval(() => {
+    timerElapsedMs = Date.now() - timerStartMs;
+    updateTimerDisplay();
+  }, 50);
+}
+
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (timerStartMs > 0) timerElapsedMs = Date.now() - timerStartMs;
+}
+
+function fmtMs(ms) {
+  if (!ms && ms !== 0) return '0:00.00';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  const cs = Math.floor((ms % 1000) / 10);
+  return `${m}:${s.toString().padStart(2,'0')}.${cs.toString().padStart(2,'0')}`;
+}
+
+function fmtMsLong(ms) {
+  if (!ms && ms !== 0) return '0.00s';
+  const totalSec = ms / 1000;
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return m > 0 ? `${m}m ${s.toFixed(2)}s` : `${s.toFixed(2)}s`;
+}
+
+function updateTimerDisplay() {
+  const str = fmtMs(timerElapsedMs);
+  const el = document.getElementById('liveTimer');
+  if (el) {
+    el.textContent = str;
+    el.className = 'timer-display' + (timerElapsedMs > 30000 ? ' warning' : '');
+  }
+  const bar = document.getElementById('timerBar');
+  if (bar) {
+    const pct = Math.min(timerElapsedMs / timerMaxMs * 100, 100);
+    bar.style.width = pct + '%';
+    bar.className = 'timer-bar' + (timerElapsedMs > 30000 ? ' warning' : '');
+  }
+  document.getElementById('headerTimerVal').textContent = str;
+}
+
+/* ── CAPTURA DE PROGRESO PARCIAL ── */
+function saveCurrentAttemptToStorage() {
+  const answeredCount = Object.keys(answered).length;
+  if (answeredCount === 0) return;
+  const correctCount = Object.values(answered).filter(a => a.correct).length;
+  const allTimes = Object.values(answered).map(a => a.timeMs);
+  const totalTime = allTimes.reduce((a,b) => a+b, 0);
+  const avgTimeMs = allTimes.length ? Math.round(totalTime / allTimes.length) : 0;
+
+  const answeredArr = questions.map((q, i) => ({
+    pregunta: q.pregunta,
+    correct: answered[i]?.correct ?? false,
+    timeMs: answered[i]?.timeMs ?? 0,
+    answered: answered[i] !== undefined
+  }));
+
+  try {
+    localStorage.setItem(`${KEY}_current_attempt`, JSON.stringify({
+      quizId: qid || 'legacy',
+      quizName: cuestionarioName || 'Cuestionario',
+      timestamp: Date.now(),
+      total: questions.length,
+      correct: correctCount,
+      pct: Math.round(correctCount / questions.length * 100),
+      avgTimeMs,
+      answers: answeredArr,
+      partial: answeredCount < questions.length
+    }));
+  } catch(e) {}
+}
+
+function flushPartialToHistory() {
+  if (quizCompleted) return;
+  try {
+    const raw2 = localStorage.getItem(`${KEY}_current_attempt`);
+    if (!raw2) return;
+    const attempt = JSON.parse(raw2);
+    const histKey = `${KEY_PREFIX}_quiz_history`;
+    const history = JSON.parse(localStorage.getItem(histKey) || '[]');
+    history.push(attempt);
+    if (history.length > 50) history.splice(0, history.length - 50);
+    localStorage.setItem(histKey, JSON.stringify(history));
+    localStorage.removeItem(`${KEY}_current_attempt`);
+  } catch(e) {}
+}
+
+window.addEventListener('beforeunload', flushPartialToHistory);
+window.addEventListener('pagehide', flushPartialToHistory);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushPartialToHistory();
+});
+
+/* Al cargar: rescatar intento parcial anterior si el beforeunload no se disparó */
+try {
+  const leftover = localStorage.getItem(`${KEY}_current_attempt`);
+  if (leftover) {
+    const attempt = JSON.parse(leftover);
+    const histKey = `${KEY_PREFIX}_quiz_history`;
+    const history = JSON.parse(localStorage.getItem(histKey) || '[]');
+    history.push(attempt);
+    if (history.length > 50) history.splice(0, history.length - 50);
+    localStorage.setItem(histKey, JSON.stringify(history));
+    localStorage.removeItem(`${KEY}_current_attempt`);
+  }
+} catch(e) {}
+
+/* ── RENDER DISPATCHER ── */
 function goBack() { navBack(); }
 
 if (!raw) {
@@ -282,48 +405,13 @@ if (!raw) {
   }
 }
 
-/* ─── TIMER ───────────────────────────────────────────── */
-function startTimer() {
-  stopTimer();
-  timerSeconds = 0;
-  timerInterval = setInterval(() => {
-    timerSeconds++;
-    updateTimerDisplay();
-  }, 1000);
-}
-function stopTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-function updateTimerDisplay() {
-  const m = Math.floor(timerSeconds / 60);
-  const s = timerSeconds % 60;
-  const str = `${m}:${s.toString().padStart(2,'0')}`;
-  const el = document.getElementById('liveTimer');
-  if (el) {
-    el.textContent = str;
-    el.className = 'timer-display' + (timerSeconds > 30 ? ' warning' : '');
-  }
-  const bar = document.getElementById('timerBar');
-  if (bar) {
-    const pct = Math.min(timerSeconds / timerMax * 100, 100);
-    bar.style.width = pct + '%';
-    bar.className = 'timer-bar' + (timerSeconds > 30 ? ' warning' : '');
-  }
-  // Header timer
-  document.getElementById('headerTimerVal').textContent = str;
-}
-
-/* ─── RENDER DISPATCHER ──────────────────────────────── */
 function renderPhase() {
-  if (currentIdx >= questions.length) {
-    showResult();
-    return;
-  }
+  if (currentIdx >= questions.length) { showResult(); return; }
   if (phase === 'reading') renderReading();
   else renderAnswering();
 }
 
-/* ─── PHASE 1: READING ────────────────────────────────── */
+/* ── PHASE 1: READING ── */
 function renderReading() {
   stopTimer();
   document.getElementById('headerTimer').style.display = 'none';
@@ -340,7 +428,7 @@ function renderReading() {
     </div>`;
 }
 
-/* ─── PHASE 2: ANSWERING ─────────────────────────────── */
+/* ── PHASE 2: ANSWERING ── */
 function showOptions() {
   phase = 'answering';
   startTimer();
@@ -355,7 +443,6 @@ function renderAnswering() {
   const typeLabel = { seleccion: 'Selección', multiple: 'Múltiple', texto: 'Completar' }[q.tipo] || q.tipo;
   const typeBadge = { seleccion: 'badge-sel', multiple: 'badge-mul', texto: 'badge-txt' }[q.tipo] || 'badge-sel';
 
-  // Dots
   let dotsHTML = '<div class="progress-dots">';
   questions.forEach((_, di) => {
     let cls = 'dot';
@@ -365,22 +452,18 @@ function renderAnswering() {
   });
   dotsHTML += '</div>';
 
-  // Timer bar
-  const m = Math.floor(timerSeconds / 60);
-  const s = timerSeconds % 60;
-  const timeStr = `${m}:${s.toString().padStart(2,'0')}`;
-  const pct = Math.min(timerSeconds / timerMax * 100, 100);
-  const warning = timerSeconds > 30;
+  const timeStr = fmtMs(timerElapsedMs);
+  const pct = Math.min(timerElapsedMs / timerMaxMs * 100, 100);
+  const warning = timerElapsedMs > 30000;
   const timerHTML = `
     <div class="timer-section">
       <div class="timer-display${warning ? ' warning' : ''}" id="liveTimer">${timeStr}</div>
       <div class="timer-bar-wrap">
         <div class="timer-bar${warning ? ' warning' : ''}" id="timerBar" style="width:${pct}%"></div>
       </div>
-      <div class="timer-label">seg de respuesta</div>
+      <div class="timer-label">de respuesta</div>
     </div>`;
 
-  // Options
   let optionsHTML = '';
   if (q.tipo === 'seleccion') {
     optionsHTML = `<div class="options-list">`;
@@ -390,8 +473,8 @@ function renderAnswering() {
       const ua = userAnswers[i];
       if (isAnswered) {
         cls += ' disabled';
-        if (op === q.respuesta_correcta) { cls += ' correct'; icon = '<span class="option-icon">✅</span>'; }
-        else if (ua === op) { cls += ' incorrect'; icon = '<span class="option-icon">❌</span>'; }
+        if (op === q.respuesta_correcta) { cls += ' correct'; icon = '<span class="option-icon">✓</span>'; }
+        else if (ua === op) { cls += ' incorrect'; icon = '<span class="option-icon">✗</span>'; }
       } else if (ua === op) { cls += ' selected'; }
       optionsHTML += `<label class="${cls}">
         <input type="radio" name="qr" value="${escH(op)}" onchange="selectOption(${i},this.value)" ${ua===op?'checked':''} ${isAnswered?'disabled':''}>
@@ -399,7 +482,6 @@ function renderAnswering() {
       </label>`;
     });
     optionsHTML += `</div>`;
-
   } else if (q.tipo === 'multiple') {
     optionsHTML = `<div class="options-list">`;
     const correctSet = new Set(q.respuestas_correctas || []);
@@ -410,9 +492,9 @@ function renderAnswering() {
       const checked = ua.includes(op);
       if (isAnswered) {
         cls += ' disabled';
-        if (correctSet.has(op) && checked) { cls += ' correct'; icon = '<span class="option-icon">✅</span>'; }
-        else if (!correctSet.has(op) && checked) { cls += ' incorrect'; icon = '<span class="option-icon">❌</span>'; }
-        else if (correctSet.has(op) && !checked) { cls += ' correct-missed'; icon = '<span class="option-icon">↩</span>'; }
+        if (correctSet.has(op) && checked) { cls += ' correct'; icon = '<span class="option-icon">✓</span>'; }
+        else if (!correctSet.has(op) && checked) { cls += ' incorrect'; icon = '<span class="option-icon">✗</span>'; }
+        else if (correctSet.has(op) && !checked) { cls += ' correct-missed'; icon = '<span class="option-icon">○</span>'; }
       } else if (checked) { cls += ' selected'; }
       optionsHTML += `<label class="${cls}">
         <input type="checkbox" name="qm" value="${escH(op)}" onchange="selectMulti(${i},this.value,this.checked)" ${checked?'checked':''} ${isAnswered?'disabled':''}>
@@ -420,7 +502,6 @@ function renderAnswering() {
       </label>`;
     });
     optionsHTML += `</div>`;
-
   } else if (q.tipo === 'texto') {
     const ua = userAnswers[i] || '';
     let inputCls = '';
@@ -434,31 +515,24 @@ function renderAnswering() {
     </div>`;
   }
 
-  // Justification + time badge
   let justHTML = '';
   if (isAnswered && q.justificacion) {
     const correct = answered[i].correct;
-    const t = answered[i].timeSec;
-    const tm = Math.floor(t/60); const ts = t%60;
-    const timeStr2 = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
     justHTML = `<div class="justification show ${correct?'correct':'incorrect'}">
-      <div class="just-label">${correct ? '✅ Correcto' : '❌ Incorrecto'} — Justificación</div>
+      <div class="just-label">${correct ? '✓ Correcto' : '✗ Incorrecto'} · Justificación</div>
       ${escH(q.justificacion)}
       ${!correct && q.tipo !== 'texto' ? `<div style="margin-top:0.5rem;font-weight:600;">Respuesta correcta: ${escH(getCorrectLabel(q))}</div>` : ''}
       ${!correct && q.tipo === 'texto' ? `<div style="margin-top:0.5rem;font-weight:600;">Respuesta correcta: ${escH(q.respuesta_correcta)}</div>` : ''}
     </div>`;
   }
 
-  // Footer
   let footerHTML = '';
   if (!isAnswered) {
     footerHTML = `<div class="q-footer">
       <button class="btn btn-primary" onclick="submitQuestion(${i})">Verificar respuesta</button>
     </div>`;
   } else {
-    const t = answered[i].timeSec;
-    const tm = Math.floor(t/60); const ts = t%60;
-    const timeStr2 = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
+    const timeStr2 = fmtMsLong(answered[i].timeMs);
     const isLast = currentIdx >= questions.length - 1;
     footerHTML = `<div class="q-footer">
       <span class="time-badge">⏱ ${timeStr2}</span>
@@ -491,7 +565,7 @@ function renderAnswering() {
     </div>`;
 }
 
-/* ─── INTERACTIONS ───────────────────────────────────── */
+/* ── INTERACTIONS ── */
 function selectOption(qi, val) { userAnswers[qi] = val; }
 function selectMulti(qi, val, checked) {
   if (!userAnswers[qi]) userAnswers[qi] = [];
@@ -520,7 +594,8 @@ function submitQuestion(qi) {
   }
 
   stopTimer();
-  answered[qi] = { correct, timeSec: timerSeconds };
+  answered[qi] = { correct, timeMs: Math.round(timerElapsedMs) };
+  saveCurrentAttemptToStorage();
   renderAnswering();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -528,29 +603,54 @@ function submitQuestion(qi) {
 function nextQuestion() {
   currentIdx++;
   phase = 'reading';
-  timerSeconds = 0;
+  timerElapsedMs = 0;
   renderPhase();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ─── RESULT ─────────────────────────────────────────── */
+/* ── RESULT ── */
 function showResult() {
+  quizCompleted = true;
   stopTimer();
   document.getElementById('headerTimer').style.display = 'none';
+  localStorage.removeItem(`${KEY}_current_attempt`);
+
   const correct = Object.values(answered).filter(a => a.correct).length;
   const total = questions.length;
   const pct = Math.round(correct / total * 100);
-  const emoji = pct >= 80 ? '🎉' : pct >= 60 ? '🙂' : '📚';
+  const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
   const msg = pct >= 80 ? '¡Excelente dominio del tema!' : pct >= 60 ? 'Buen esfuerzo, sigue repasando.' : 'Sigue estudiando, vas a lograrlo.';
   const scoreClass = pct >= 80 ? 'great' : pct >= 60 ? 'ok' : 'low';
 
-  // Total time and avg
-  const allTimes = Object.values(answered).map(a => a.timeSec);
+  const allTimes = Object.values(answered).map(a => a.timeMs);
   const totalTime = allTimes.reduce((a,b) => a+b, 0);
   const avgTime = allTimes.length ? Math.round(totalTime / allTimes.length) : 0;
   const fastQ = allTimes.indexOf(Math.min(...allTimes)) + 1;
   const slowQ = allTimes.indexOf(Math.max(...allTimes)) + 1;
-  const fmtTime = s => { const m=Math.floor(s/60),r=s%60; return m>0?`${m}m ${r}s`:`${r}s`; };
+
+  try {
+    const histKey = `${KEY_PREFIX}_quiz_history`;
+    const history = JSON.parse(localStorage.getItem(histKey) || '[]');
+    const answeredArr = questions.map((q, i) => ({
+      pregunta: q.pregunta,
+      correct: answered[i]?.correct ?? false,
+      timeMs: answered[i]?.timeMs ?? 0,
+      answered: answered[i] !== undefined
+    }));
+    history.push({
+      quizId: qid || 'legacy',
+      quizName: cuestionarioName || 'Cuestionario',
+      timestamp: Date.now(),
+      total: total,
+      correct: correct,
+      pct: pct,
+      avgTimeMs: avgTime,
+      answers: answeredArr,
+      partial: false
+    });
+    if (history.length > 50) history.splice(0, history.length - 50);
+    localStorage.setItem(histKey, JSON.stringify(history));
+  } catch(e) {}
 
   root.innerHTML = `
     <div class="result-screen">
@@ -564,27 +664,27 @@ function showResult() {
         <div class="result-stat"><div class="num">${total}</div><div class="lbl">Total</div></div>
       </div>
       <div class="result-time-summary">
-        <div class="t-row"><span>⏱ Tiempo total</span><span>${fmtTime(totalTime)}</span></div>
-        <div class="t-row"><span>⚡ Promedio por pregunta</span><span>${fmtTime(avgTime)}</span></div>
-        <div class="t-row"><span>🚀 Pregunta más rápida</span><span>P${fastQ} · ${fmtTime(Math.min(...allTimes))}</span></div>
-        <div class="t-row"><span>🐢 Pregunta más lenta</span><span>P${slowQ} · ${fmtTime(Math.max(...allTimes))}</span></div>
+        <div class="t-row"><span>⏱ Tiempo total</span><span>${fmtMsLong(totalTime)}</span></div>
+        <div class="t-row"><span>📊 Promedio por pregunta</span><span>${fmtMsLong(avgTime)}</span></div>
+        <div class="t-row"><span>⚡ Pregunta más rápida</span><span>P${fastQ} · ${fmtMsLong(Math.min(...allTimes))}</span></div>
+        <div class="t-row"><span>🐢 Pregunta más lenta</span><span>P${slowQ} · ${fmtMsLong(Math.max(...allTimes))}</span></div>
       </div>
       <div class="result-actions">
-        <button class="btn btn-ghost" onclick="reviewAnswers()">🔎 Revisar respuestas</button>
+        <button class="btn btn-ghost" onclick="reviewAnswers()">📝 Revisar respuestas</button>
         <button class="btn btn-primary" onclick="resetQuiz()">🔄 Intentar de nuevo</button>
+        <button class="btn" style="background:#7c3aed;color:#fff;" onclick="navTo('dominio.html?s='+encodeURIComponent(subjectId)+'&c='+encodeURIComponent(classId))">📊 Ver Dominio</button>
         <button class="btn btn-ghost" onclick="navBack()">← Volver</button>
       </div>
     </div>`;
 }
 
-/* ─── REVIEW MODE ────────────────────────────────────── */
+/* ── REVIEW MODE ── */
 function reviewAnswers() {
   stopTimer();
-  const fmtTime = s => { const m=Math.floor(s/60),r=s%60; return m>0?`${m}m ${r}s`:`${r}s`; };
 
   let html = `<div class="review-container">
     <div class="review-top">
-      <div class="review-title">📋 Revisión de respuestas</div>
+      <div class="review-title">📝 Revisión de respuestas</div>
       <button class="btn btn-ghost" onclick="showResult()">← Volver al resultado</button>
     </div>`;
 
@@ -592,7 +692,7 @@ function reviewAnswers() {
     const typeLabel = { seleccion: 'Selección', multiple: 'Múltiple', texto: 'Completar' }[q.tipo] || q.tipo;
     const typeBadge = { seleccion: 'badge-sel', multiple: 'badge-mul', texto: 'badge-txt' }[q.tipo] || 'badge-sel';
     const isCorrect = answered[i]?.correct;
-    const timeSec = answered[i]?.timeSec ?? 0;
+    const timeMsVal = answered[i]?.timeMs ?? 0;
 
     let optionsHTML = '';
     if (q.tipo === 'seleccion') {
@@ -601,8 +701,8 @@ function reviewAnswers() {
         let cls = 'option disabled';
         let icon = '';
         const ua = userAnswers[i];
-        if (op === q.respuesta_correcta) { cls += ' correct'; icon = '<span class="option-icon">✅</span>'; }
-        else if (ua === op) { cls += ' incorrect'; icon = '<span class="option-icon">❌</span>'; }
+        if (op === q.respuesta_correcta) { cls += ' correct'; icon = '<span class="option-icon">✓</span>'; }
+        else if (ua === op) { cls += ' incorrect'; icon = '<span class="option-icon">✗</span>'; }
         optionsHTML += `<label class="${cls}"><input type="radio" disabled ${ua===op?'checked':''}>${escH(op)}${icon}</label>`;
       });
       optionsHTML += `</div>`;
@@ -613,9 +713,9 @@ function reviewAnswers() {
       (q.opciones || []).forEach(op => {
         let cls = 'option disabled'; let icon = '';
         const checked = ua.includes(op);
-        if (correctSet.has(op) && checked) { cls += ' correct'; icon = '<span class="option-icon">✅</span>'; }
-        else if (!correctSet.has(op) && checked) { cls += ' incorrect'; icon = '<span class="option-icon">❌</span>'; }
-        else if (correctSet.has(op) && !checked) { cls += ' correct-missed'; icon = '<span class="option-icon">↩</span>'; }
+        if (correctSet.has(op) && checked) { cls += ' correct'; icon = '<span class="option-icon">✓</span>'; }
+        else if (!correctSet.has(op) && checked) { cls += ' incorrect'; icon = '<span class="option-icon">✗</span>'; }
+        else if (correctSet.has(op) && !checked) { cls += ' correct-missed'; icon = '<span class="option-icon">○</span>'; }
         optionsHTML += `<label class="${cls}"><input type="checkbox" disabled ${checked?'checked':''}>${escH(op)}${icon}</label>`;
       });
       optionsHTML += `</div>`;
@@ -628,7 +728,7 @@ function reviewAnswers() {
     let justHTML = '';
     if (q.justificacion) {
       justHTML = `<div class="justification show ${isCorrect?'correct':'incorrect'}">
-        <div class="just-label">${isCorrect ? '✅ Correcto' : '❌ Incorrecto'} — Justificación</div>
+        <div class="just-label">${isCorrect ? '✓ Correcto' : '✗ Incorrecto'} · Justificación</div>
         ${escH(q.justificacion)}
         ${!isCorrect && q.tipo !== 'texto' ? `<div style="margin-top:0.5rem;font-weight:600;">Respuesta correcta: ${escH(getCorrectLabel(q))}</div>` : ''}
         ${!isCorrect && q.tipo === 'texto' ? `<div style="margin-top:0.5rem;font-weight:600;">Respuesta correcta: ${escH(q.respuesta_correcta)}</div>` : ''}
@@ -648,7 +748,7 @@ function reviewAnswers() {
       </div>
       ${optionsHTML}
       ${justHTML}
-      <div class="q-footer"><span class="time-badge">⏱ ${fmtTime(timeSec)}</span></div>
+      <div class="q-footer"><span class="time-badge">⏱ ${fmtMsLong(timeMsVal)}</span></div>
     </div>`;
   });
 
@@ -658,13 +758,15 @@ function reviewAnswers() {
 }
 
 function resetQuiz() {
+  localStorage.removeItem(`${KEY}_current_attempt`);
+  quizCompleted = false;
   answered = {}; userAnswers = {};
-  currentIdx = 0; phase = 'reading'; timerSeconds = 0;
+  currentIdx = 0; phase = 'reading'; timerElapsedMs = 0;
   renderPhase();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ─── HELPERS ─────────────────────────────────────────── */
+/* ── HELPERS ── */
 function getCorrectLabel(q) {
   if (q.tipo === 'seleccion') return q.respuesta_correcta;
   if (q.tipo === 'multiple') return (q.respuestas_correctas || []).join(', ');

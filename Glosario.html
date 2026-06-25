@@ -53,6 +53,8 @@
   .view-toggle button.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
 </style>
   <script src="_nav.js"></script>
+  <script src="cordova.js" onerror="void 0"></script>
+  <script src="_share.js" onerror="void 0"></script>
 </head>
 <body>
 
@@ -85,13 +87,28 @@
 const params = new URLSearchParams(location.search);
 const subjectId = params.get('s');
 const classId = params.get('c');
-const KEY = `study_${subjectId}_${classId}_glosario`;
+const gid = params.get('gid');
+const KEY_PREFIX = `study_${subjectId}_${classId}`;
+const KEY = gid ? `${KEY_PREFIX}_glosario_${gid}` : `${KEY_PREFIX}_glosario`;
 
 const subjects = JSON.parse(localStorage.getItem('study_subjects') || '[]');
 const subject = subjects.find(s => s.id === subjectId);
 const cls = subject?.classes?.find(c => c.id === classId);
+
+// Si se abrió un glosario específico de la lista, usar su nombre en el encabezado
+let glosarioName = null;
+if (gid) {
+  try {
+    const idx = JSON.parse(localStorage.getItem(`${KEY_PREFIX}_glosarios_index`) || '[]');
+    const item = idx.find(i => i.id === gid);
+    if (item) glosarioName = item.name;
+  } catch {}
+}
+
 document.getElementById('headerSub').textContent = cls ? cls.name : 'Clase';
-document.getElementById('headerClass').textContent = subject ? `${subject.icon} ${subject.name}` : 'Glosario';
+document.getElementById('headerClass').textContent = glosarioName
+  ? `${subject ? subject.icon + ' ' : ''}${glosarioName}`
+  : (subject ? `${subject.icon} ${subject.name}` : 'Glosario');
 
 const raw = localStorage.getItem(KEY);
 const grid = document.getElementById('glossaryGrid');

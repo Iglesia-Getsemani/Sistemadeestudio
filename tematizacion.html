@@ -52,6 +52,8 @@
   .contenido-item .ci-type { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 99px; font-weight: 600; background: #e0e7ff; color: #3730a3; }
   .contenido-item .ci-open { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 6px; background: #4f46e5; color: #fff; border: none; cursor: pointer; font-weight: 500; }
   .contenido-item .ci-open:hover { background: #4338ca; }
+  .contenido-item .ci-study { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 6px; background: #16a34a; color: #fff; border: none; cursor: pointer; font-weight: 500; }
+  .contenido-item .ci-study:hover { background: #15803d; }
   .contenido-item .ci-del { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; cursor: pointer; }
   .contenido-item .ci-del:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 
@@ -130,6 +132,8 @@
   .btn-template:hover { background: #4338ca; }
 </style>
   <script src="_nav.js"></script>
+  <script src="cordova.js" onerror="void 0"></script>
+  <script src="_share.js" onerror="void 0"></script>
 </head>
 <body>
 
@@ -146,19 +150,19 @@
 
   <!-- Secciones navegables -->
   <div class="sections-grid">
-    <a class="section-card" href="#" onclick="openContenidoSelector(); return false;">
+    <a class="section-card" href="#" onclick="openMultiSelector('contenido'); return false;">
       <div class="icon">📄</div>
       <h3>Contenido / Esquemas</h3>
       <p>Estructura conceptual, lecciones, normas y más</p>
       <span class="status status-empty" id="statusContenido">Sin cargar</span>
     </a>
-    <a class="section-card" href="#" onclick="openSection('glosario'); return false;">
+    <a class="section-card" href="#" onclick="openMultiSelector('glosario'); return false;">
       <div class="icon">📖</div>
       <h3>Glosario</h3>
       <p>Términos clave y definiciones del tema</p>
       <span class="status status-empty" id="statusGlosario">Sin cargar</span>
     </a>
-    <a class="section-card" href="#" onclick="openSection('cuestionario'); return false;">
+    <a class="section-card" href="#" onclick="openMultiSelector('cuestionario'); return false;">
       <div class="icon">✏️</div>
       <h3>Cuestionario</h3>
       <p>Preguntas de evaluación y autoevaluación</p>
@@ -176,6 +180,12 @@
       <p>Practica y memoriza los términos del glosario</p>
       <span class="status status-empty" id="statusEstudio">Sin cargar</span>
     </a>
+    <a class="section-card" href="#" onclick="openDominio(); return false;" style="border: 2px solid rgba(124,58,237,0.25); background: rgba(124,58,237,0.04);">
+      <div class="icon">📊</div>
+      <h3>Índice de Dominio</h3>
+      <p>Analiza tu esfuerzo y dominio del tema con base en los cuestionarios</p>
+      <span class="status" id="statusDominio" style="background:#ede9fe;color:#5b21b6;">Ver análisis →</span>
+    </a>
   </div>
 
   <!-- Carga de JSONs -->
@@ -185,24 +195,35 @@
 
       <!-- Contenido — multi-item -->
       <div id="boxContenido">
-        <div class="upload-box multi-loaded" id="boxContenidoInner" onclick="openLoaderContenido()">
+        <div class="upload-box multi-loaded" id="boxContenidoInner" onclick="openLoaderMulti('contenido')">
           <div class="up-icon">📄</div>
           <div class="up-title">Contenido / Esquemas</div>
           <div class="up-sub" id="contenidoSub">Haz clic para agregar</div>
         </div>
         <div class="contenidos-list" id="contenidosList"></div>
-        <button class="add-contenido-btn" id="btnAddContenido" onclick="openLoaderContenido()" style="display:none;">+ Agregar otro contenido</button>
+        <button class="add-contenido-btn" id="btnAddContenido" onclick="openLoaderMulti('contenido')" style="display:none;">+ Agregar otro contenido</button>
       </div>
 
-      <div class="upload-box" id="boxGlosario" onclick="openLoader('glosario')">
-        <div class="up-icon">📖</div>
-        <div class="up-title">Glosario</div>
-        <div class="up-sub">Haz clic para cargar</div>
+      <!-- Glosario — multi-item -->
+      <div id="boxGlosario">
+        <div class="upload-box" id="boxGlosarioInner" onclick="openLoaderMulti('glosario')">
+          <div class="up-icon">📖</div>
+          <div class="up-title">Glosario</div>
+          <div class="up-sub" id="glosarioSub">Haz clic para agregar</div>
+        </div>
+        <div class="contenidos-list" id="glosariosList"></div>
+        <button class="add-contenido-btn" id="btnAddGlosario" onclick="openLoaderMulti('glosario')" style="display:none;">+ Agregar otro glosario</button>
       </div>
-      <div class="upload-box" id="boxCuestionario" onclick="openLoader('cuestionario')">
-        <div class="up-icon">✏️</div>
-        <div class="up-title">Cuestionario</div>
-        <div class="up-sub">Haz clic para cargar</div>
+
+      <!-- Cuestionario — multi-item -->
+      <div id="boxCuestionario">
+        <div class="upload-box" id="boxCuestionarioInner" onclick="openLoaderMulti('cuestionario')">
+          <div class="up-icon">✏️</div>
+          <div class="up-title">Cuestionario</div>
+          <div class="up-sub" id="cuestionarioSub">Haz clic para agregar</div>
+        </div>
+        <div class="contenidos-list" id="cuestionariosList"></div>
+        <button class="add-contenido-btn" id="btnAddCuestionario" onclick="openLoaderMulti('cuestionario')" style="display:none;">+ Agregar otro cuestionario</button>
       </div>
       <div class="upload-box" id="boxTematizacion" onclick="openLoader('tematizacion')">
         <div class="up-icon">🗂️</div>
@@ -216,17 +237,17 @@
   </div>
 </div>
 
-<!-- Modal selector de contenidos cargados -->
+<!-- Modal selector de items cargados (contenido / glosario / cuestionario) -->
 <div class="modal-overlay" id="modalContenidoSelector">
   <div class="modal">
     <div class="modal-header">
-      <h3>📄 Contenidos disponibles</h3>
-      <p>Selecciona el contenido que quieres ver</p>
+      <h3 id="selectorTitle">📄 Contenidos disponibles</h3>
+      <p id="selectorSub">Selecciona el contenido que quieres ver</p>
     </div>
     <div class="contents-selector" id="contentsSelectorList"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalContenidoSelector')">Cancelar</button>
-      <button class="btn btn-primary" onclick="openLoaderContenido(); closeModal('modalContenidoSelector');">+ Agregar nuevo</button>
+      <button class="btn btn-primary" onclick="openLoaderMulti(window.__selectorType); closeModal('modalContenidoSelector');">+ Agregar nuevo</button>
     </div>
   </div>
 </div>
@@ -242,7 +263,7 @@
     <!-- Nombre para contenido -->
     <div id="nameGroup" style="padding: 0.75rem 1.5rem 0; display:none;">
       <div class="form-group">
-        <label>Nombre de este contenido</label>
+        <label id="nameLabel">Nombre de este contenido</label>
         <input type="text" id="inputContenidoName" placeholder="Ej: Lección 5 — El Juicio">
       </div>
     </div>
@@ -302,13 +323,145 @@ document.getElementById('headerSubject').textContent = subject ? `${subject.icon
 document.getElementById('headerClass').textContent   = cls ? cls.name : 'Clase';
 
 function getKey(type) { return `${KEY_PREFIX}_${type}`; }
-// Contenido usa una lista: guardamos como array JSON en KEY_PREFIX_contenidos_index
-// Cada item: { id, name, detectedType, data }
-function getContenidosKey() { return `${KEY_PREFIX}_contenidos_index`; }
-function loadContenidos() {
-  try { return JSON.parse(localStorage.getItem(getContenidosKey()) || '[]'); } catch { return []; }
+
+// ── Sistema multi-item (Contenido, Glosario, Cuestionario) ─────────
+// Cada tipo tiene un índice: KEY_PREFIX_{type}s_index → [{ id, name, detectedType? }]
+// y un item por id: KEY_PREFIX_{type}_{id}
+const MULTI_CFG = {
+  contenido:    { icon: '📄', label: 'Contenido',    page: 'Contenido.html',    param: 'cid', detect: true  },
+  glosario:     { icon: '📖', label: 'Glosario',     page: 'Glosario.html',     param: 'gid', detect: false },
+  cuestionario: { icon: '✏️', label: 'Cuestionario', page: 'cuestionario.html', param: 'qid', detect: false },
+};
+const MULTI_DOM = {
+  contenido:    { listEl: 'contenidosList',    boxInner: 'boxContenidoInner',    sub: 'contenidoSub',    addBtn: 'btnAddContenido',    status: 'statusContenido' },
+  glosario:     { listEl: 'glosariosList',     boxInner: 'boxGlosarioInner',     sub: 'glosarioSub',     addBtn: 'btnAddGlosario',     status: 'statusGlosario' },
+  cuestionario: { listEl: 'cuestionariosList', boxInner: 'boxCuestionarioInner', sub: 'cuestionarioSub', addBtn: 'btnAddCuestionario', status: 'statusCuestionario' },
+};
+
+function getIndexKey(type) { return `${KEY_PREFIX}_${type}s_index`; }
+function loadIndex(type) { try { return JSON.parse(localStorage.getItem(getIndexKey(type)) || '[]'); } catch { return []; } }
+function saveIndex(type, arr) { localStorage.setItem(getIndexKey(type), JSON.stringify(arr)); }
+
+// Migra datos antiguos (un solo glosario/cuestionario por clase) al nuevo formato de lista,
+// la primera vez que se abre la clase tras la actualización.
+function migrateLegacyToMulti(type) {
+  if (loadIndex(type).length) return; // ya tiene items, no migrar
+  const legacyKey = getKey(type);
+  const legacyRaw = localStorage.getItem(legacyKey);
+  if (!legacyRaw) return;
+  const id = Date.now().toString();
+  localStorage.setItem(`${KEY_PREFIX}_${type}_${id}`, legacyRaw);
+  saveIndex(type, [{ id, name: `${MULTI_CFG[type].label} 1` }]);
+  if (type === 'cuestionario') localStorage.removeItem(legacyKey);
+  // Para glosario se conserva la clave antigua: se mantiene sincronizada como
+  // "espejo" del primer glosario para que Estudiar Glosario siga funcionando.
 }
-function saveContenidos(arr) { localStorage.setItem(getContenidosKey(), JSON.stringify(arr)); }
+
+function renderMultiList(type) {
+  const cfg = MULTI_CFG[type];
+  const dom = MULTI_DOM[type];
+  const list = loadIndex(type);
+  const listEl   = document.getElementById(dom.listEl);
+  const addBtn   = document.getElementById(dom.addBtn);
+  const subEl    = document.getElementById(dom.sub);
+  const statusEl = document.getElementById(dom.status);
+  const boxInner = document.getElementById(dom.boxInner);
+
+  if (!list.length) {
+    listEl.innerHTML = '';
+    addBtn.style.display = 'none';
+    boxInner.className = 'upload-box';
+    subEl.textContent = 'Haz clic para agregar';
+    statusEl.textContent = 'Sin cargar';
+    statusEl.className = 'status status-empty';
+    return;
+  }
+
+  boxInner.className = 'upload-box multi-loaded';
+  subEl.textContent = list.length === 1 ? '1 cargado' : `${list.length} cargados`;
+  addBtn.style.display = 'block';
+  statusEl.textContent = `${list.length} cargado${list.length > 1 ? 's' : ''}`;
+  statusEl.className = 'status status-multi';
+
+  listEl.innerHTML = list.map(item => {
+    let icon = cfg.icon, label = cfg.label;
+    if (cfg.detect) {
+      const tcfg = TYPE_MAP[item.detectedType] || TYPE_MAP.academico;
+      icon = tcfg.icon; label = tcfg.label;
+    }
+    return `<div class="contenido-item">
+      <span class="ci-icon">${icon}</span>
+      <span class="ci-name">${escHtml(item.name)}</span>
+      <span class="ci-type">${label}</span>
+      <button class="ci-open" onclick="openMultiItem('${type}','${item.id}')">📖 Abrir</button>
+      ${type === 'glosario' ? `<button class="ci-study" onclick="openEstudio('${item.id}')">🧠 Estudiar</button>` : ''}
+      <button class="ci-del" onclick="deleteMultiItem('${type}','${item.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function openMultiItem(type, id) {
+  const cfg = MULTI_CFG[type];
+  navTo(`${cfg.page}?s=${subjectId}&c=${classId}&${cfg.param}=${id}`);
+}
+
+function openEstudio(gid) {
+  navTo(`estudio.html?s=${subjectId}&c=${classId}&gid=${gid}`);
+}
+
+function deleteMultiItem(type, id) {
+  if (!confirm(`¿Eliminar este ${MULTI_CFG[type].label.toLowerCase()}?`)) return;
+  const list = loadIndex(type).filter(i => i.id !== id);
+  localStorage.removeItem(`${KEY_PREFIX}_${type}_${id}`);
+  saveIndex(type, list);
+  renderMultiList(type);
+  if (type === 'glosario') syncGlosarioMirror();
+  showToast('🗑️ Eliminado');
+}
+
+function openMultiSelector(type) {
+  const cfg = MULTI_CFG[type];
+  const list = loadIndex(type);
+  window.__selectorType = type;
+  if (!list.length) { openLoaderMulti(type); return; }
+  const verbMap = {
+    contenido:    'el contenido que quieres ver',
+    glosario:     'el glosario que quieres ver',
+    cuestionario: 'el cuestionario que quieres responder',
+  };
+  document.getElementById('selectorTitle').textContent = `${cfg.icon} ${cfg.label}s disponibles`;
+  document.getElementById('selectorSub').textContent   = `Selecciona ${verbMap[type]}`;
+  const selEl = document.getElementById('contentsSelectorList');
+  selEl.innerHTML = list.map(item => {
+    let icon = cfg.icon, label = cfg.label;
+    if (cfg.detect) {
+      const tcfg = TYPE_MAP[item.detectedType] || TYPE_MAP.academico;
+      icon = tcfg.icon; label = tcfg.label;
+    }
+    return `<div class="cs-item" onclick="openMultiItem('${type}','${item.id}'); closeModal('modalContenidoSelector')">
+      <span class="cs-icon">${icon}</span>
+      <div class="cs-info">
+        <div class="cs-name">${escHtml(item.name)}</div>
+        <div class="cs-type">${label}</div>
+      </div>
+      <span class="cs-arrow">›</span>
+    </div>`;
+  }).join('');
+  openModal('modalContenidoSelector');
+}
+
+// Mantiene la clave antigua "study_{s}_{c}_glosario" sincronizada con el primer
+// glosario de la lista, para que "Estudiar Glosario" siga funcionando igual.
+function syncGlosarioMirror() {
+  const idx = loadIndex('glosario');
+  if (idx.length) {
+    const raw = localStorage.getItem(`${KEY_PREFIX}_glosario_${idx[0].id}`);
+    if (raw) localStorage.setItem(getKey('glosario'), raw);
+  } else {
+    localStorage.removeItem(getKey('glosario'));
+  }
+  updateStatus('estudio', idx.length > 0);
+}
 
 // ── Detectar tipo de JSON ──────────────────────────────────────────
 const TYPE_MAP = {
@@ -738,74 +891,6 @@ function copyTemplate() {
   }
 }
 
-// ── Render lista de contenidos ────────────────────────────────────
-function renderContenidosList() {
-  const list = loadContenidos();
-  const listEl   = document.getElementById('contenidosList');
-  const btnAdd   = document.getElementById('btnAddContenido');
-  const subEl    = document.getElementById('contenidoSub');
-  const statusEl = document.getElementById('statusContenido');
-  const boxInner = document.getElementById('boxContenidoInner');
-
-  if (!list.length) {
-    listEl.innerHTML = '';
-    btnAdd.style.display = 'none';
-    boxInner.className = 'upload-box';
-    subEl.textContent = 'Haz clic para agregar';
-    statusEl.textContent = 'Sin cargar';
-    statusEl.className = 'status status-empty';
-    return;
-  }
-
-  boxInner.className = 'upload-box multi-loaded';
-  subEl.textContent = list.length === 1 ? '1 contenido cargado' : `${list.length} contenidos cargados`;
-  btnAdd.style.display = 'block';
-  statusEl.textContent = `${list.length} cargado${list.length > 1 ? 's' : ''}`;
-  statusEl.className = 'status status-multi';
-
-  listEl.innerHTML = list.map(item => {
-    const cfg = TYPE_MAP[item.detectedType] || TYPE_MAP.academico;
-    return `<div class="contenido-item">
-      <span class="ci-icon">${cfg.icon}</span>
-      <span class="ci-name">${escHtml(item.name)}</span>
-      <span class="ci-type">${cfg.label}</span>
-      <button class="ci-open" onclick="openContenidoItem('${item.id}')">📖 Abrir</button>
-      <button class="ci-del" onclick="deleteContenido('${item.id}')">✕</button>
-    </div>`;
-  }).join('');
-}
-
-function openContenidoItem(id) {
-  navTo(`Contenido.html?s=${subjectId}&c=${classId}&cid=${id}`);
-}
-function deleteContenido(id) {
-  if (!confirm('¿Eliminar este contenido?')) return;
-  const list = loadContenidos().filter(i => i.id !== id);
-  // también borrar los datos del item
-  localStorage.removeItem(`${KEY_PREFIX}_contenido_${id}`);
-  saveContenidos(list);
-  renderContenidosList();
-  showToast('🗑️ Contenido eliminado');
-}
-
-function openContenidoSelector() {
-  const list = loadContenidos();
-  if (!list.length) { openLoaderContenido(); return; }
-  const selEl = document.getElementById('contentsSelectorList');
-  selEl.innerHTML = list.map(item => {
-    const cfg = TYPE_MAP[item.detectedType] || TYPE_MAP.academico;
-    return `<div class="cs-item" onclick="openContenidoItem('${item.id}'); closeModal('modalContenidoSelector')">
-      <span class="cs-icon">${cfg.icon}</span>
-      <div class="cs-info">
-        <div class="cs-name">${escHtml(item.name)}</div>
-        <div class="cs-type">${cfg.label}</div>
-      </div>
-      <span class="cs-arrow">›</span>
-    </div>`;
-  }).join('');
-  openModal('modalContenidoSelector');
-}
-
 // ── Loader modal ──────────────────────────────────────────────────
 let currentType    = null; // 'contenido' | 'glosario' | 'cuestionario' | 'tematizacion'
 let currentTab     = 'file';
@@ -819,8 +904,8 @@ const TITLES = {
   tematizacion: { title: 'Cargar Tematización', sub: 'FormatoTematizacion.json' },
 };
 
-function openLoaderContenido() {
-  currentType    = 'contenido';
+function openLoaderMulti(type) {
+  currentType    = type;
   parsedFileData = null; pasteValid = false; autoFilename = '';
   document.getElementById('pasteArea').value = '';
   document.getElementById('pasteArea').className = 'paste-area';
@@ -828,8 +913,12 @@ function openLoaderContenido() {
   document.getElementById('pasteFeedback').className = 'paste-feedback';
   document.getElementById('fileStatus').textContent = '';
   document.getElementById('inputContenidoName').value = '';
-  document.getElementById('loaderTitle').textContent = 'Agregar Contenido';
-  document.getElementById('loaderSub').textContent = 'El tipo se detectará automáticamente';
+  const cfg = MULTI_CFG[type];
+  document.getElementById('loaderTitle').textContent = `Agregar ${cfg.label}`;
+  document.getElementById('loaderSub').textContent = cfg.detect
+    ? 'El tipo se detectará automáticamente'
+    : `Formato esperado: ${TITLES[type].sub}`;
+  document.getElementById('nameLabel').textContent = `Nombre de este ${cfg.label.toLowerCase()}`;
   document.getElementById('nameGroup').style.display = 'block';
   switchTab('file');
   setupTemplateUI();
@@ -924,21 +1013,27 @@ function saveLoader() {
     data = JSON.parse(document.getElementById('pasteArea').value.trim());
   }
 
-  if (currentType === 'contenido') {
-    const name = document.getElementById('inputContenidoName').value.trim() || autoFilename || `Contenido ${Date.now()}`;
-    const detectedType = detectType(data);
+  if (MULTI_CFG[currentType]) {
+    const cfg = MULTI_CFG[currentType];
+    const list = loadIndex(currentType);
+    const defaultName = `${cfg.label} ${list.length + 1}`;
+    const name = document.getElementById('inputContenidoName').value.trim() || autoFilename || defaultName;
     const id = Date.now().toString();
-    localStorage.setItem(`${KEY_PREFIX}_contenido_${id}`, JSON.stringify(data));
-    const list = loadContenidos();
-    list.push({ id, name, detectedType });
-    saveContenidos(list);
-    renderContenidosList();
-    showToast(`✅ "${name}" guardado — ${TYPE_MAP[detectedType]?.label}`);
+    const entry = { id, name };
+    let typeMsg = '';
+    if (cfg.detect) {
+      entry.detectedType = detectType(data);
+      typeMsg = ` — ${TYPE_MAP[entry.detectedType]?.label}`;
+    }
+    localStorage.setItem(`${KEY_PREFIX}_${currentType}_${id}`, JSON.stringify(data));
+    list.push(entry);
+    saveIndex(currentType, list);
+    renderMultiList(currentType);
+    if (currentType === 'glosario') syncGlosarioMirror();
+    showToast(`✅ "${name}" guardado${typeMsg}`);
   } else {
     localStorage.setItem(getKey(currentType), JSON.stringify(data));
     updateStatus(currentType, true);
-    // Si se carga el glosario, también reflejar en Estudiar
-    if (currentType === 'glosario') updateStatus('estudio', true);
     showToast(`✅ ${TITLES[currentType].title.replace('Cargar ','')} guardado`);
   }
   closeLoader();
@@ -964,9 +1059,19 @@ function updateStatus(type, loaded) {
   }
 }
 
+function openDominio() {
+  navTo(`dominio.html?s=${subjectId}&c=${classId}`);
+}
+
 function openSection(type) {
-  const checkKey = type === 'estudio' ? getKey('glosario') : getKey(type);
-  if (!localStorage.getItem(checkKey)) { showToast('⚠️ Primero carga el JSON de ' + (type === 'estudio' ? 'Glosario' : 'esta sección')); return; }
+  if (type === 'estudio') {
+    const hasGlosario = loadIndex('glosario').length > 0 || !!localStorage.getItem(getKey('glosario'));
+    if (!hasGlosario) { showToast('⚠️ Primero carga el JSON de Glosario'); return; }
+    navTo(`estudio.html?s=${subjectId}&c=${classId}`);
+    return;
+  }
+  const checkKey = getKey(type);
+  if (!localStorage.getItem(checkKey)) { showToast('⚠️ Primero carga el JSON de esta sección'); return; }
   const pages = {
     glosario: 'Glosario.html', cuestionario: 'cuestionario.html', tematizacion: 'Tematizacion_Vista.html', estudio: 'estudio.html'
   };
@@ -976,42 +1081,49 @@ function openSection(type) {
 function exportClass() {
   const sExp = { id: subjectId, name: subject ? subject.name : subjectId, icon: subject?.icon || '📘', color: subject?.color || '#4f46e5', classes: [] };
   const clsExp = { id: classId, name: cls ? cls.name : classId, data: {} };
-  ['glosario','cuestionario','tematizacion'].forEach(t => {
+  // Tematización: dato único por clase
+  const tRaw = localStorage.getItem(getKey('tematizacion'));
+  if (tRaw) { try { clsExp.data.tematizacion = JSON.parse(tRaw); } catch {} }
+  // Glosario / Cuestionario (espejo legado, por compatibilidad con versiones anteriores)
+  ['glosario','cuestionario'].forEach(t => {
     const raw = localStorage.getItem(getKey(t));
     if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
   });
-  const idxRaw = localStorage.getItem(getContenidosKey());
-  if (idxRaw) {
-    try {
-      const idx = JSON.parse(idxRaw);
-      clsExp.data.contenidos_index = idx;
-      clsExp.data.contenidos_items = {};
+  // Multi-item: Contenido, Glosario, Cuestionario
+  ['contenido','glosario','cuestionario'].forEach(type => {
+    const idx = loadIndex(type);
+    if (idx.length) {
+      clsExp.data[`${type}s_index`] = idx;
+      clsExp.data[`${type}_items`] = {};
       idx.forEach(item => {
-        const d = localStorage.getItem(`${KEY_PREFIX}_contenido_${item.id}`);
-        if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
+        const d = localStorage.getItem(`${KEY_PREFIX}_${type}_${item.id}`);
+        if (d) { try { clsExp.data[`${type}_items`][item.id] = JSON.parse(d); } catch {} }
       });
-    } catch {}
-  }
+    }
+  });
   sExp.classes.push(clsExp);
-  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [sExp] };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
+  const payload = { version: 1, type: 'study_export', scope: 'class', exportedAt: new Date().toISOString(), subjects: [sExp] };
   const slug = (cls?.name || 'clase').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  a.href = URL.createObjectURL(blob);
-  a.download = `clase_${slug}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  showToast('📤 Clase exportada');
+  const filename = `clase_${slug}.json`;
+  STUDY.shareFile(payload, filename, {
+    message: `Clase "${cls ? cls.name : classId}" - Sistema de Estudio`,
+    subject: filename,
+    onFallback: () => showToast('Clase exportada')
+  });
 }
 
 function clearAll() {
   if (!confirm('¿Eliminar todos los datos cargados en esta clase?')) return;
-  ['glosario','cuestionario','tematizacion'].forEach(t => { localStorage.removeItem(getKey(t)); updateStatus(t, false); });
+  localStorage.removeItem(getKey('tematizacion')); updateStatus('tematizacion', false);
+  // limpiar todos los items multi: contenido, glosario, cuestionario
+  ['contenido','glosario','cuestionario'].forEach(type => {
+    loadIndex(type).forEach(item => localStorage.removeItem(`${KEY_PREFIX}_${type}_${item.id}`));
+    saveIndex(type, []);
+    renderMultiList(type);
+  });
+  localStorage.removeItem(getKey('glosario'));
+  localStorage.removeItem(getKey('cuestionario'));
   updateStatus('estudio', false);
-  // limpiar todos los contenidos
-  loadContenidos().forEach(item => localStorage.removeItem(`${KEY_PREFIX}_contenido_${item.id}`));
-  saveContenidos([]);
-  renderContenidosList();
   showToast('🗑️ Datos eliminados');
 }
 
@@ -1030,12 +1142,18 @@ document.querySelectorAll('.modal-overlay').forEach(m =>
 );
 
 // Inicializar
-['glosario','cuestionario','tematizacion'].forEach(t => {
-  if (localStorage.getItem(getKey(t))) updateStatus(t, true);
-});
-// Estudiar Glosario refleja el estado del glosario
-if (localStorage.getItem(getKey('glosario'))) updateStatus('estudio', true);
-renderContenidosList();
+// Tematización sigue siendo un único dato por clase
+if (localStorage.getItem(getKey('tematizacion'))) updateStatus('tematizacion', true);
+
+// Migrar glosario/cuestionario antiguos (un solo item) al nuevo formato de lista
+migrateLegacyToMulti('glosario');
+migrateLegacyToMulti('cuestionario');
+
+// Renderizar las tres listas multi-item
+['contenido','glosario','cuestionario'].forEach(type => renderMultiList(type));
+
+// Estudiar Glosario refleja si hay al menos un glosario cargado (multi-glosario o formato antiguo)
+if (loadIndex('glosario').length > 0 || localStorage.getItem(getKey('glosario'))) updateStatus('estudio', true);
 </script>
 </body>
 </html>

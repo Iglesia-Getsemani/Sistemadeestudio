@@ -71,6 +71,8 @@
   .toast.show { opacity: 1; transform: translateY(0); }
 </style>
   <script src="_nav.js"></script>
+  <script src="cordova.js" onerror="void 0"></script>
+  <script src="_share.js" onerror="void 0"></script>
 </head>
 <body>
 
@@ -135,6 +137,18 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalImport')">Cancelar</button>
       <button class="btn btn-success" id="btnDoImport" onclick="doImport()" style="display:none">✅ Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: elegir asignatura destino para una CLASE importada -->
+<div class="modal-overlay" id="modalClassTarget">
+  <div class="modal">
+    <h3>📦 ¿A qué asignatura agregar esta clase?</h3>
+    <div id="classTargetIncomingInfo" style="font-size:0.85rem; color:#374151; margin-bottom:0.75rem;"></div>
+    <div id="classTargetList" style="display:flex; flex-direction:column; gap:0.5rem; max-height:300px; overflow:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalClassTarget')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -248,36 +262,45 @@ function deleteSubject(id) {
 function exportSubject(subjectId) {
   const s = subjects.find(x => x.id === subjectId);
   if (!s) return;
-  const payload = buildExportPayload([s]);
-  downloadJSON(payload, `asignatura_${slugify(s.name)}.json`);
-  showToast(`📤 "${s.name}" exportada`);
+  const payload = buildExportPayload([s], 'subject');
+  const filename = `asignatura_${slugify(s.name)}.json`;
+  STUDY.shareFile(payload, filename, {
+    message: `📚 Asignatura "${s.name}" — Sistema de Estudio`,
+    subject: filename,
+    onFallback: () => showToast(`📤 "${s.name}" exportada`)
+  });
 }
 
-function buildExportPayload(subjectList) {
-  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [] };
+function buildExportPayload(subjectList, scope) {
+  const payload = { version: 1, type: 'study_export', scope: scope || 'subject', exportedAt: new Date().toISOString(), subjects: [] };
   subjectList.forEach(s => {
     const sExp = { id: s.id, name: s.name, icon: s.icon, color: s.color, classes: [] };
     (s.classes || []).forEach(cls => {
       const prefix = `study_${s.id}_${cls.id}`;
       const clsExp = { id: cls.id, name: cls.name, data: {} };
-      // Single-type keys
-      ['glosario','cuestionario','tematizacion'].forEach(t => {
+      // Tematización: dato único por clase
+      const tRaw = localStorage.getItem(`${prefix}_tematizacion`);
+      if (tRaw) { try { clsExp.data.tematizacion = JSON.parse(tRaw); } catch {} }
+      // Glosario / Cuestionario: espejo legado (compatibilidad con versiones anteriores)
+      ['glosario','cuestionario'].forEach(t => {
         const raw = localStorage.getItem(`${prefix}_${t}`);
         if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
       });
-      // Multi contenidos
-      const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
-      if (idxRaw) {
-        try {
-          const idx = JSON.parse(idxRaw);
-          clsExp.data.contenidos_index = idx;
-          clsExp.data.contenidos_items = {};
-          idx.forEach(item => {
-            const d = localStorage.getItem(`${prefix}_contenido_${item.id}`);
-            if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
-          });
-        } catch {}
-      }
+      // Multi-item: Contenido, Glosario, Cuestionario
+      ['contenido','glosario','cuestionario'].forEach(type => {
+        const idxRaw = localStorage.getItem(`${prefix}_${type}s_index`);
+        if (idxRaw) {
+          try {
+            const idx = JSON.parse(idxRaw);
+            clsExp.data[`${type}s_index`] = idx;
+            clsExp.data[`${type}_items`] = {};
+            idx.forEach(item => {
+              const d = localStorage.getItem(`${prefix}_${type}_${item.id}`);
+              if (d) { try { clsExp.data[`${type}_items`][item.id] = JSON.parse(d); } catch {} }
+            });
+          } catch {}
+        }
+      });
       sExp.classes.push(clsExp);
     });
     payload.subjects.push(sExp);
@@ -308,8 +331,15 @@ function readImportFile(file) {
       const data = JSON.parse(e.target.result);
       if (!data.subjects || !Array.isArray(data.subjects)) throw new Error('Formato no reconocido');
       importPayload = data;
-      const totalClases = data.subjects.reduce((a,s) => a + (s.classes||[]).length, 0);
-      st.textContent = `✅ ${data.subjects.length} asignatura(s) · ${totalClases} clase(s) listas para importar`;
+      const scope = data.scope || 'subject';
+      if (scope === 'class') {
+        const donor = data.subjects[0] || {};
+        const names = (donor.classes || []).map(c => c.name).join(', ');
+        st.textContent = `📄 Clase detectada: ${names}. Al importar, elegirás la asignatura destino.`;
+      } else {
+        const totalClases = data.subjects.reduce((a,s) => a + (s.classes||[]).length, 0);
+        st.textContent = `✅ ${data.subjects.length} asignatura(s) · ${totalClases} clase(s) listas para importar`;
+      }
       st.style.color = '#166534';
       document.getElementById('btnDoImport').style.display = 'inline-flex';
     } catch(err) {
@@ -323,30 +353,117 @@ function readImportFile(file) {
 }
 function doImport() {
   if (!importPayload) return;
-  let added = 0, skipped = 0;
-  importPayload.subjects.forEach(s => {
-    const exists = subjects.find(x => x.id === s.id);
-    if (exists) { skipped++; return; }
-    // Restaurar localStorage de cada clase
-    (s.classes || []).forEach(cls => {
-      const prefix = `study_${s.id}_${cls.id}`;
-      const d = cls.data || {};
-      ['glosario','cuestionario','tematizacion'].forEach(t => {
-        if (d[t]) localStorage.setItem(`${prefix}_${t}`, JSON.stringify(d[t]));
+  closeModal('modalImport');
+  applyImportPayload(importPayload);
+  importPayload = null;
+}
+
+// Protocolo único de importación, usado tanto por el selector manual
+// como por archivos .json abiertos/compartidos desde WhatsApp u otra app:
+// - "asignatura" (scope subject, o exports antiguos sin scope) → se crea automáticamente.
+// - "clase" (scope class) → se pregunta a qué asignatura agregarla.
+function applyImportPayload(payload) {
+  if (!payload || payload.type !== 'study_export' || !Array.isArray(payload.subjects)) {
+    showToast('❌ Archivo no reconocido');
+    return;
+  }
+  const scope = payload.scope || 'subject';
+  if (scope === 'class') {
+    promptClassImportTarget(payload);
+  } else {
+    importFullSubjects(payload);
+  }
+}
+
+function restoreClassData(s_id, cls) {
+  const prefix = `study_${s_id}_${cls.id}`;
+  const d = cls.data || {};
+  // Dato único: glosario espejo, cuestionario espejo, tematizacion
+  ['glosario','cuestionario','tematizacion'].forEach(t => {
+    if (d[t]) localStorage.setItem(`${prefix}_${t}`, JSON.stringify(d[t]));
+  });
+  // Multi-item: Contenido, Glosario, Cuestionario
+  ['contenido','glosario','cuestionario'].forEach(type => {
+    const idxKey = `${type}s_index`, itemsKey = `${type}_items`;
+    if (d[idxKey]) {
+      localStorage.setItem(`${prefix}_${idxKey}`, JSON.stringify(d[idxKey]));
+      Object.entries(d[itemsKey] || {}).forEach(([id, val]) => {
+        localStorage.setItem(`${prefix}_${type}_${id}`, JSON.stringify(val));
       });
-      if (d.contenidos_index) {
-        localStorage.setItem(`${prefix}_contenidos_index`, JSON.stringify(d.contenidos_index));
-        Object.entries(d.contenidos_items || {}).forEach(([id, val]) => {
-          localStorage.setItem(`${prefix}_contenido_${id}`, JSON.stringify(val));
-        });
-      }
-    });
-    subjects.push({ id: s.id, name: s.name, icon: s.icon, color: s.color, classes: s.classes.map(c => ({ id: c.id, name: c.name })) });
+    }
+  });
+}
+
+function importFullSubjects(payload) {
+  let added = 0, updated = 0;
+  payload.subjects.forEach(s => {
+    const exists = subjects.find(x => x.id === s.id);
+    if (exists) {
+      // La asignatura ya existe: restaurar datos de localStorage de las clases del export
+      (s.classes || []).forEach(cls => restoreClassData(s.id, cls));
+      updated++;
+      return;
+    }
+    // Nueva asignatura: restaurar todo
+    (s.classes || []).forEach(cls => restoreClassData(s.id, cls));
+    subjects.push({ id: s.id, name: s.name, icon: s.icon, color: s.color, classes: (s.classes||[]).map(c => ({ id: c.id, name: c.name })) });
     added++;
   });
-  save(); render(); closeModal('modalImport');
-  showToast(`✅ ${added} importada(s)${skipped ? `, ${skipped} ya existían` : ''}`);
+  save(); render();
+  const parts = [];
+  if (added)   parts.push(`${added} asignatura${added !== 1 ? 's' : ''} importada${added !== 1 ? 's' : ''}`);
+  if (updated) parts.push(`${updated} actualizada${updated !== 1 ? 's' : ''} (datos restaurados)`);
+  showToast(`✅ ${parts.join(', ')}`);
 }
+
+let pendingClassPayload = null;
+function promptClassImportTarget(payload) {
+  pendingClassPayload = payload;
+  const donor = payload.subjects[0] || {};
+  const classNames = (donor.classes || []).map(c => c.name).join(', ');
+  document.getElementById('classTargetIncomingInfo').textContent =
+    `Clase${(donor.classes||[]).length > 1 ? 's' : ''}: ${classNames}`;
+  const list = document.getElementById('classTargetList');
+  if (!subjects.length) {
+    list.innerHTML = `<div style="color:#9ca3af; font-size:0.85rem;">No tienes asignaturas todavía. Crea una primero y vuelve a abrir el archivo.</div>`;
+  } else {
+    list.innerHTML = subjects.map(s => `
+      <button class="btn btn-ghost" style="width:100%; justify-content:flex-start;" onclick="confirmClassImportTarget('${s.id}')">
+        <span style="margin-right:0.5rem;">${s.icon}</span>${escH(s.name)}
+      </button>
+    `).join('');
+  }
+  openModal('modalClassTarget');
+}
+function confirmClassImportTarget(targetSubjectId) {
+  if (!pendingClassPayload) return;
+  const target = subjects.find(s => s.id === targetSubjectId);
+  if (!target) return;
+  let imported = 0;
+  pendingClassPayload.subjects.forEach(s => {
+    (s.classes || []).forEach(cls => {
+      const newId = Date.now().toString() + Math.random().toString(36).slice(2,6);
+      if (!target.classes) target.classes = [];
+      target.classes.push({ id: newId, name: cls.name });
+      // Restaurar datos con el nuevo id de clase pero conservando los IDs de los ítems
+      restoreClassData(targetSubjectId, { id: newId, data: cls.data });
+      imported++;
+    });
+  });
+  save(); render();
+  closeModal('modalClassTarget');
+  pendingClassPayload = null;
+  showToast(`✅ ${imported} clase${imported !== 1 ? 's' : ''} agregada${imported !== 1 ? 's' : ''} a "${target.name}"`);
+}
+
+// Recibe archivos .json abiertos/compartidos desde WhatsApp u otra app (vía _share.js)
+function tryConsumeIncomingImport() {
+  if (window.STUDY && typeof STUDY.consumePendingImport === 'function') {
+    const pending = STUDY.consumePendingImport();
+    if (pending) applyImportPayload(pending);
+  }
+}
+window.addEventListener('study:incoming-import', tryConsumeIncomingImport);
 
 // ── Helpers ───────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
@@ -361,6 +478,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('cli
 
 sessionStorage.removeItem('__navStack');
 render();
+tryConsumeIncomingImport();
 </script>
 </body>
 </html>

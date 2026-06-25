@@ -67,6 +67,8 @@
   .toast.show { opacity: 1; transform: translateY(0); }
 </style>
   <script src="_nav.js"></script>
+  <script src="cordova.js" onerror="void 0"></script>
+  <script src="_share.js" onerror="void 0"></script>
 </head>
 <body>
 
@@ -220,9 +222,13 @@ function deleteClass(id) {
 // ── Export ────────────────────────────────────────────────────────
 function exportSubject() {
   if (!subject) return;
-  const payload = buildExportPayload([subject]);
-  downloadJSON(payload, `asignatura_${slugify(subject.name)}.json`);
-  showToast(`📤 "${subject.name}" exportada completa`);
+  const payload = buildExportPayload([subject], 'subject');
+  const filename = `asignatura_${slugify(subject.name)}.json`;
+  STUDY.shareFile(payload, filename, {
+    message: `📚 Asignatura "${subject.name}" — Sistema de Estudio`,
+    subject: filename,
+    onFallback: () => showToast(`📤 "${subject.name}" exportada completa`)
+  });
 }
 
 function exportClass(classId) {
@@ -235,26 +241,33 @@ function exportClass(classId) {
     const raw = localStorage.getItem(`${prefix}_${t}`);
     if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
   });
-  const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
-  if (idxRaw) {
+  // Multi-item: Contenido (mismo formato que tematizacion.html)
+  ['contenido','glosario','cuestionario'].forEach(type => {
+    const idxRaw = localStorage.getItem(`${prefix}_${type}s_index`);
+    if (!idxRaw) return;
     try {
       const idx = JSON.parse(idxRaw);
-      clsExp.data.contenidos_index = idx;
-      clsExp.data.contenidos_items = {};
+      if (!idx.length) return;
+      clsExp.data[`${type}s_index`] = idx;
+      clsExp.data[`${type}_items`] = {};
       idx.forEach(item => {
-        const d = localStorage.getItem(`${prefix}_contenido_${item.id}`);
-        if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
+        const d = localStorage.getItem(`${prefix}_${type}_${item.id}`);
+        if (d) { try { clsExp.data[`${type}_items`][item.id] = JSON.parse(d); } catch {} }
       });
     } catch {}
-  }
+  });
   sExp.classes.push(clsExp);
-  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [sExp] };
-  downloadJSON(payload, `clase_${slugify(cls.name)}.json`);
-  showToast(`📤 "${cls.name}" exportada`);
+  const payload = { version: 1, type: 'study_export', scope: 'class', exportedAt: new Date().toISOString(), subjects: [sExp] };
+  const filename = `clase_${slugify(cls.name)}.json`;
+  STUDY.shareFile(payload, filename, {
+    message: `🗂️ Clase "${cls.name}" (${subject.name}) — Sistema de Estudio`,
+    subject: filename,
+    onFallback: () => showToast(`📤 "${cls.name}" exportada`)
+  });
 }
 
-function buildExportPayload(subjectList) {
-  const payload = { version: 1, type: 'study_export', exportedAt: new Date().toISOString(), subjects: [] };
+function buildExportPayload(subjectList, scope) {
+  const payload = { version: 1, type: 'study_export', scope: scope || 'subject', exportedAt: new Date().toISOString(), subjects: [] };
   subjectList.forEach(s => {
     const sExp = { id: s.id, name: s.name, icon: s.icon, color: s.color, classes: [] };
     (s.classes || []).forEach(cls => {
@@ -264,18 +277,21 @@ function buildExportPayload(subjectList) {
         const raw = localStorage.getItem(`${prefix}_${t}`);
         if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
       });
-      const idxRaw = localStorage.getItem(`${prefix}_contenidos_index`);
-      if (idxRaw) {
+      // Multi-item: Contenido, Glosario, Cuestionario (mismo formato que tematizacion.html)
+      ['contenido','glosario','cuestionario'].forEach(type => {
+        const idxRaw = localStorage.getItem(`${prefix}_${type}s_index`);
+        if (!idxRaw) return;
         try {
           const idx = JSON.parse(idxRaw);
-          clsExp.data.contenidos_index = idx;
-          clsExp.data.contenidos_items = {};
+          if (!idx.length) return;
+          clsExp.data[`${type}s_index`] = idx;
+          clsExp.data[`${type}_items`] = {};
           idx.forEach(item => {
-            const d = localStorage.getItem(`${prefix}_contenido_${item.id}`);
-            if (d) { try { clsExp.data.contenidos_items[item.id] = JSON.parse(d); } catch {} }
+            const d = localStorage.getItem(`${prefix}_${type}_${item.id}`);
+            if (d) { try { clsExp.data[`${type}_items`][item.id] = JSON.parse(d); } catch {} }
           });
         } catch {}
-      }
+      });
       sExp.classes.push(clsExp);
     });
     payload.subjects.push(sExp);
@@ -309,13 +325,16 @@ function importClassFromFile(event) {
           ['glosario','cuestionario','tematizacion'].forEach(t => {
             if (data[t] !== undefined) localStorage.setItem(`${prefix}_${t}`, JSON.stringify(data[t]));
           });
-          if (data.contenidos_index) {
-            localStorage.setItem(`${prefix}_contenidos_index`, JSON.stringify(data.contenidos_index));
-            const items = data.contenidos_items || {};
-            Object.keys(items).forEach(itemId => {
-              localStorage.setItem(`${prefix}_contenido_${itemId}`, JSON.stringify(items[itemId]));
-            });
-          }
+          // Multi-item: Contenido, Glosario, Cuestionario
+          ['contenido','glosario','cuestionario'].forEach(type => {
+            const idxKey = `${type}s_index`, itemsKey = `${type}_items`;
+            if (data[idxKey]) {
+              localStorage.setItem(`${prefix}_${idxKey}`, JSON.stringify(data[idxKey]));
+              Object.entries(data[itemsKey] || {}).forEach(([itemId, val]) => {
+                localStorage.setItem(`${prefix}_${type}_${itemId}`, JSON.stringify(val));
+              });
+            }
+          });
           imported++;
         });
       });
