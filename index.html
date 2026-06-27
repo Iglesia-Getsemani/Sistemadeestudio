@@ -69,6 +69,28 @@
 
   .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #1a1a2e; color: #fff; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.875rem; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; z-index: 200; max-width: 300px; }
   .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── Sistema de clave (función de pago) ── */
+  .unlock-bar { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; padding:1rem 1.25rem; }
+  .unlock-bar.unlocked { background:#f0fdf4; border-color:#86efac; }
+  .unlock-bar-title { font-size:0.8rem; font-weight:600; color:#374151; margin-bottom:0.6rem; display:flex; align-items:center; gap:0.4rem; }
+  .unlock-bar.unlocked .unlock-bar-title { color:#166534; }
+  .unlock-row { display:flex; gap:0.5rem; align-items:center; }
+  .unlock-input { flex:1; padding:0.45rem 0.65rem; border:1.5px solid #d1d5db; border-radius:8px; font-size:0.82rem; font-family:'Courier New',monospace; outline:none; transition:border 0.15s; letter-spacing:0.08em; text-transform:uppercase; }
+  .unlock-input:focus { border-color:#4f46e5; }
+  .unlock-input.ok  { border-color:#22c55e; background:#f0fdf4; }
+  .unlock-input.err { border-color:#ef4444; background:#fef2f2; }
+  .unlock-btn { padding:0.45rem 0.9rem; border-radius:8px; border:none; background:#4f46e5; color:#fff; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .unlock-btn:hover { background:#4338ca; }
+  .unlock-fb { font-size:0.72rem; margin-top:0.3rem; min-height:1rem; }
+  .unlock-fb.ok  { color:#166534; }
+  .unlock-fb.err { color:#dc2626; }
+  .time-hint { font-size:0.72rem; color:#6b7280; margin-bottom:0.5rem; line-height:1.4; }
+  .time-hint span { font-weight:600; color:#4f46e5; }
+  .devcode-row { display:flex; gap:0.5rem; align-items:center; margin-bottom:0.6rem; }
+  .devcode-box { flex:1; background:#f1f5f9; border:1.5px solid #cbd5e1; border-radius:8px; padding:0.4rem 0.65rem; font-family:'Courier New',monospace; font-size:0.63rem; color:#1e293b; word-break:break-all; line-height:1.5; }
+  .copy-devcode-btn { font-size:0.72rem; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; white-space:nowrap; }
+  .copy-devcode-btn:hover { background:#f1f5f9; }
 </style>
   <script src="_nav.js"></script>
   <script src="cordova.js" onerror="void 0"></script>
@@ -153,6 +175,40 @@
   </div>
 </div>
 
+<!-- Modal de clave — función de pago para Exportar -->
+<div class="modal-overlay" id="modalUnlockExport">
+  <div class="modal" style="max-width:420px;">
+    <h3>🔒 Función de pago</h3>
+    <p id="unlockReasonText" style="font-size:0.82rem; color:#6b7280; margin:-0.75rem 0 1rem;">Exportar asignaturas o clases requiere una clave de activación.</p>
+    <div class="unlock-bar" id="unlockBar">
+      <div class="unlock-bar-title" id="unlockBarTitle">🔒 Función de pago</div>
+      <div id="modeApp" style="display:none;">
+        <div class="time-hint">Copia tu código y envíalo al administrador para recibir tu clave.</div>
+        <div class="devcode-row">
+          <div class="devcode-box" id="devCodeDisplay">Calculando…</div>
+          <button class="copy-devcode-btn" onclick="copyDevCode()">📋 Copiar</button>
+        </div>
+      </div>
+      <div id="modeBrowser" style="display:none;">
+        <div class="time-hint" id="timeHint">El administrador te indicará el momento exacto.<br>Tendrás <span>5 minutos</span> para ingresar la clave.</div>
+      </div>
+      <div id="unlockInputArea">
+        <div class="unlock-row">
+          <input class="unlock-input" id="unlockKeyInput" placeholder="XXXX-XXXX" oninput="onUnlockInput()">
+          <button class="unlock-btn" onclick="tryUnlock()">🔓 Activar</button>
+        </div>
+        <div class="unlock-fb" id="unlockFb"></div>
+      </div>
+      <div id="unlockActive" style="display:none; align-items:center; gap:0.4rem; font-size:0.82rem; color:#166534;">
+        ✅ Funciones activas <span id="unlockActiveDetail"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalUnlockExport')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -164,6 +220,19 @@ let editingSubjectId = null;
 let selectedEmoji = EMOJIS[0];
 let selectedColor = COLORS[0];
 let importPayload = null;
+
+// ── Límites de la versión gratuita (creación + importación cuentan igual) ──
+const MAX_SUBJECTS = 3;
+const MAX_CLASSES_PER_SUBJECT = 3;
+const MAX_ITEMS_PER_TYPE = 2; // contenido / glosario / cuestionario, por clase
+
+function itemCountsExceedLimit(data) {
+  if (!data) return false;
+  return ['contenido','glosario','cuestionario'].some(type => {
+    const idx = data[`${type}s_index`];
+    return idx && idx.length > MAX_ITEMS_PER_TYPE;
+  });
+}
 
 function save() { localStorage.setItem('study_subjects', JSON.stringify(subjects)); }
 
@@ -247,10 +316,18 @@ function saveSubject() {
   if (editingSubjectId) {
     const s = subjects.find(x => x.id === editingSubjectId);
     s.name = name; s.icon = selectedEmoji; s.color = selectedColor;
-  } else {
-    subjects.push({ id: Date.now().toString(), name, icon: selectedEmoji, color: selectedColor, classes: [] });
+    save(); render(); closeModal('modalSubject');
+    return;
   }
-  save(); render(); closeModal('modalSubject');
+  const create = () => {
+    subjects.push({ id: Date.now().toString(), name, icon: selectedEmoji, color: selectedColor, classes: [] });
+    save(); render(); closeModal('modalSubject');
+  };
+  if (subjects.length >= MAX_SUBJECTS) {
+    requireUnlock(create, `🔒 Límite gratuito: máximo ${MAX_SUBJECTS} asignaturas. Ingresa tu clave para crear más.`);
+  } else {
+    create();
+  }
 }
 function deleteSubject(id) {
   if (!confirm('¿Eliminar esta asignatura y todas sus clases?')) return;
@@ -258,16 +335,224 @@ function deleteSubject(id) {
   save(); render();
 }
 
+// ════════════════════════════════════════════════════════════════
+// SISTEMA DE CLAVE — dual: app (huella) o navegador (tiempo)
+// (Idéntico al de clases.html / tematizacion.html: una misma clave
+//  desbloquea las funciones de pago en toda la app — el estado se
+//  comparte vía localStorage/sessionStorage entre todas las pantallas)
+// ════════════════════════════════════════════════════════════════
+const _SALT = 'EST2025XZ'; // sal interna, no visible para el usuario
+
+function isApp() {
+  return !!(window.cordova || window.PhoneGap || window.phonegap ||
+            (typeof window.device !== 'undefined') ||
+            /^file:\/\//.test(location.protocol) === false && window.cordova);
+}
+function isBrowser() { return !isApp(); }
+
+let _deviceFp = null;
+let _unlocked = false;
+let _unlockMode = 'browser';
+let _pendingUnlockAction = null;
+
+async function getDeviceFingerprint() {
+  const parts = [
+    navigator.userAgent, navigator.language,
+    screen.width + 'x' + screen.height, screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    (navigator.hardwareConcurrency || ''), (navigator.platform || '')
+  ];
+  const raw = parts.join('||');
+  if (crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+    const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    return hex.substring(0,48).toUpperCase().match(/.{1,8}/g).join('-');
+  } else {
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) { h = (Math.imul(31, h) + raw.charCodeAt(i)) | 0; }
+    const hex = (h >>> 0).toString(16).padStart(8,'0').toUpperCase();
+    return hex.match(/.{1,2}/g).join('').padEnd(48,'0').match(/.{1,8}/g).join('-');
+  }
+}
+
+async function computeDeviceKey(fp) {
+  const base = fp.replace(/-/g,'').substring(0,16) + _SALT;
+  if (crypto.subtle) {
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(_SALT),
+      {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', km, new TextEncoder().encode(fp.replace(/-/g,'').substring(0,16)));
+    const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    return hex.substring(0,4)+'-'+hex.substring(4,8);
+  } else {
+    let h = 0;
+    for (let i=0; i<base.length; i++) { h = (Math.imul(31,h)+base.charCodeAt(i))|0; }
+    const hex = (h>>>0).toString(16).padStart(8,'0').toUpperCase();
+    return hex.substring(0,4)+'-'+hex.substring(4,8);
+  }
+}
+
+function currentTimeBlock() {
+  const n = new Date();
+  const Y = n.getFullYear();
+  const M = String(n.getMonth()+1).padStart(2,'0');
+  const D = String(n.getDate()).padStart(2,'0');
+  const H = String(n.getHours()).padStart(2,'0');
+  const B = String(Math.floor(n.getMinutes()/5)).padStart(2,'0');
+  return `${Y}${M}${D}${H}${B}`;
+}
+
+function simpleHash(str) {
+  let h = 5381;
+  for (let i=0; i<str.length; i++) h = ((h<<5)+h) ^ str.charCodeAt(i);
+  return (h>>>0).toString(16).padStart(8,'0').toUpperCase();
+}
+
+function computeTimeKey(block) {
+  const raw = _SALT + block;
+  const hex = simpleHash(raw);
+  return hex.substring(0,4)+'-'+hex.substring(4,8);
+}
+
+function validTimeKeys() {
+  const now = currentTimeBlock();
+  const prev = (() => {
+    const n = new Date(Date.now() - 5*60*1000);
+    const Y=n.getFullYear(), M=String(n.getMonth()+1).padStart(2,'0'),
+          D=String(n.getDate()).padStart(2,'0'), H=String(n.getHours()).padStart(2,'0'),
+          B=String(Math.floor(n.getMinutes()/5)).padStart(2,'0');
+    return `${Y}${M}${D}${H}${B}`;
+  })();
+  return [computeTimeKey(now), computeTimeKey(prev)];
+}
+
+function applyUnlockState() {
+  const bar = document.getElementById('unlockBar');
+  if (!bar) return;
+  if (_unlocked) {
+    bar.classList.add('unlocked');
+    document.getElementById('unlockBarTitle').textContent = '✅ Funciones activas';
+    document.getElementById('unlockInputArea').style.display = 'none';
+    document.getElementById('modeApp').style.display = 'none';
+    document.getElementById('modeBrowser').style.display = 'none';
+    const act = document.getElementById('unlockActive');
+    act.style.display = 'flex';
+    document.getElementById('unlockActiveDetail').textContent =
+      _unlockMode === 'app' ? 'en este dispositivo' : 'para esta sesión';
+  } else {
+    bar.classList.remove('unlocked');
+    document.getElementById('unlockBarTitle').textContent = '🔒 Función de pago';
+    document.getElementById('unlockInputArea').style.display = 'block';
+    document.getElementById('unlockActive').style.display = 'none';
+    if (_unlockMode === 'app') {
+      document.getElementById('modeApp').style.display = 'block';
+      document.getElementById('modeBrowser').style.display = 'none';
+    } else {
+      document.getElementById('modeApp').style.display = 'none';
+      document.getElementById('modeBrowser').style.display = 'block';
+    }
+  }
+}
+
+async function initDevUnlock() {
+  _unlockMode = isApp() ? 'app' : 'browser';
+  if (_unlockMode === 'app') {
+    _deviceFp = await getDeviceFingerprint();
+    const el = document.getElementById('devCodeDisplay');
+    if (el) el.textContent = _deviceFp;
+    const saved = localStorage.getItem('study_devkey_unlock');
+    if (saved === _deviceFp) { _unlocked = true; }
+  } else {
+    const sess = sessionStorage.getItem('study_session_unlock');
+    if (sess === 'true') { _unlocked = true; }
+  }
+  applyUnlockState();
+}
+
+function copyDevCode() {
+  if (!_deviceFp) { showToast('⚠️ Código aún calculando'); return; }
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = _deviceFp; ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('📋 Código copiado'); } catch {}
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(_deviceFp).then(()=>showToast('📋 Código copiado')).catch(fallback);
+  else fallback();
+}
+
+function onUnlockInput() {
+  const inp = document.getElementById('unlockKeyInput');
+  const fb  = document.getElementById('unlockFb');
+  const val = inp.value.trim().toUpperCase();
+  if (!val) { inp.className='unlock-input'; fb.textContent=''; return; }
+  const fmt = /^[A-F0-9]{4}-[A-F0-9]{4}$/;
+  if (fmt.test(val)) {
+    inp.className='unlock-input ok'; fb.textContent=''; fb.className='unlock-fb';
+  } else {
+    inp.className='unlock-input err';
+    fb.textContent='Formato: XXXX-XXXX'; fb.className='unlock-fb err';
+  }
+}
+
+async function tryUnlock() {
+  const entered = (document.getElementById('unlockKeyInput').value||'').trim().toUpperCase();
+  if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
+
+  let valid = false;
+  if (_unlockMode === 'app') {
+    if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
+    const expected = await computeDeviceKey(_deviceFp);
+    valid = (entered === expected);
+    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+  } else {
+    const keys = validTimeKeys();
+    valid = keys.includes(entered);
+    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+  }
+
+  if (valid) {
+    _unlocked = true;
+    applyUnlockState();
+    showToast('✅ Funciones desbloqueadas');
+    closeModal('modalUnlockExport');
+    if (_pendingUnlockAction) { const fn = _pendingUnlockAction; _pendingUnlockAction = null; fn(); }
+  } else {
+    const inp = document.getElementById('unlockKeyInput');
+    const fb  = document.getElementById('unlockFb');
+    inp.className='unlock-input err';
+    fb.textContent='❌ Clave incorrecta'; fb.className='unlock-fb err';
+    showToast('❌ Clave incorrecta');
+  }
+}
+
+// Punto de entrada: exige clave activa antes de ejecutar `action`.
+async function requireUnlock(action, reason) {
+  await initDevUnlock(); // refresca estado (puede haberse desbloqueado en otra pantalla)
+  if (_unlocked) { action(); return; }
+  _pendingUnlockAction = action;
+  const reasonEl = document.getElementById('unlockReasonText');
+  if (reasonEl) reasonEl.textContent = reason || 'Exportar asignaturas o clases requiere una clave de activación.';
+  const inp = document.getElementById('unlockKeyInput');
+  inp.value = ''; inp.className = 'unlock-input';
+  document.getElementById('unlockFb').textContent = '';
+  openModal('modalUnlockExport');
+}
+// ════════════════════════════════════════════════════════════════
+
 // ── Export ────────────────────────────────────────────────────────
 function exportSubject(subjectId) {
-  const s = subjects.find(x => x.id === subjectId);
-  if (!s) return;
-  const payload = buildExportPayload([s], 'subject');
-  const filename = `asignatura_${slugify(s.name)}.json`;
-  STUDY.shareFile(payload, filename, {
-    message: `📚 Asignatura "${s.name}" — Sistema de Estudio`,
-    subject: filename,
-    onFallback: () => showToast(`📤 "${s.name}" exportada`)
+  requireUnlock(() => {
+    const s = subjects.find(x => x.id === subjectId);
+    if (!s) return;
+    const payload = buildExportPayload([s], 'subject');
+    const filename = `asignatura_${slugify(s.name)}.json`;
+    STUDY.shareFile(payload, filename, {
+      message: `📚 Asignatura "${s.name}" — Sistema de Estudio`,
+      subject: filename,
+      onFallback: () => showToast(`📤 "${s.name}" exportada`)
+    });
   });
 }
 
@@ -394,7 +679,26 @@ function restoreClassData(s_id, cls) {
   });
 }
 
-function importFullSubjects(payload) {
+function subjectImportExceedsLimits(payload) {
+  const newSubjects = payload.subjects.filter(s => !subjects.find(x => x.id === s.id));
+  if (subjects.length + newSubjects.length > MAX_SUBJECTS) return true;
+  for (const s of payload.subjects) {
+    const exists = subjects.find(x => x.id === s.id);
+    if (!exists && (s.classes || []).length > MAX_CLASSES_PER_SUBJECT) return true;
+    for (const cls of (s.classes || [])) {
+      if (itemCountsExceedLimit(cls.data)) return true;
+    }
+  }
+  return false;
+}
+
+async function importFullSubjects(payload) {
+  await initDevUnlock();
+  if (!_unlocked && subjectImportExceedsLimits(payload)) {
+    requireUnlock(() => importFullSubjects(payload),
+      `🔒 Este archivo supera los límites gratuitos (máx. ${MAX_SUBJECTS} asignaturas, ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave para importar todo.`);
+    return;
+  }
   let added = 0, updated = 0;
   payload.subjects.forEach(s => {
     const exists = subjects.find(x => x.id === s.id);
@@ -435,10 +739,21 @@ function promptClassImportTarget(payload) {
   }
   openModal('modalClassTarget');
 }
-function confirmClassImportTarget(targetSubjectId) {
+async function confirmClassImportTarget(targetSubjectId) {
   if (!pendingClassPayload) return;
   const target = subjects.find(s => s.id === targetSubjectId);
   if (!target) return;
+
+  await initDevUnlock();
+  const incomingClasses = pendingClassPayload.subjects.flatMap(s => s.classes || []);
+  const wouldExceedClasses = (target.classes || []).length + incomingClasses.length > MAX_CLASSES_PER_SUBJECT;
+  const itemsTooMany = incomingClasses.some(cls => itemCountsExceedLimit(cls.data));
+  if (!_unlocked && (wouldExceedClasses || itemsTooMany)) {
+    requireUnlock(() => confirmClassImportTarget(targetSubjectId),
+      `🔒 Esta importación supera el límite gratuito (máx. ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave para continuar.`);
+    return;
+  }
+
   let imported = 0;
   pendingClassPayload.subjects.forEach(s => {
     (s.classes || []).forEach(cls => {

@@ -350,6 +350,401 @@ function genQuestionsAcademico(d) {
   return qs;
 }
 
+/* ── NARRATIVA HISTÓRICA ──────────────────────────────────────── */
+function genQuestionsNarrativa(d) {
+  const qs = [];
+  const arcos = d.arcos || [];
+
+  // Aplanar todos los eventos con su contexto de arco/secuencia
+  const eventos = [];
+  arcos.forEach((arc) => {
+    (arc.secuencias || []).forEach((seq) => {
+      (seq.eventos || []).forEach((evt) => {
+        eventos.push({ ...evt, _arcoTitulo: arc.titulo, _seqTitulo: seq.titulo });
+      });
+    });
+  });
+
+  // ── Q×4: ¿Dónde sucedió esta escena? ──
+  const conLugar = eventos.filter(e => hasVal(e.lugar?.nombre) && hasVal(e.titulo));
+  if (conLugar.length >= 2) {
+    const allLugares = [...new Set(conLugar.map(e => e.lugar.nombre))];
+    const shuffledLugar = [...conLugar].sort(() => Math.random() - 0.5);
+    const usedLugar = shuffledLugar.slice(0, Math.min(4, shuffledLugar.length));
+    usedLugar.forEach(target => {
+      const wrongPool = allLugares
+        .filter(l => l !== target.lugar.nombre)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      if (!wrongPool.length) return;
+      const opts = [target.lugar.nombre, ...wrongPool].sort(() => Math.random() - 0.5);
+      const desc = target.descripcion ? (target.descripcion.length > 110 ? target.descripcion.slice(0, 110) + '…' : target.descripcion) : '';
+      qs.push({
+        type: 'choice',
+        question: `📍 ¿Dónde sucedió esta escena?\n\n"${target.titulo}"${desc ? ' — ' + desc : ''}`,
+        options: opts,
+        correct: target.lugar.nombre,
+        explanation: `La escena "${target.titulo}" ocurrió en ${target.lugar.nombre}.`,
+        timeSec: 22,
+      });
+    });
+  }
+
+  // ── Q: ¿Quién participó en este evento? ──
+  const conActores = eventos.filter(e => hasVal(e.actores) && e.actores.length >= 1 && hasVal(e.titulo));
+  if (conActores.length >= 2) {
+    const target = conActores[Math.floor(Math.random() * conActores.length)];
+    const actorCorrecto = target.actores[0];
+    const otherActores = [...new Set(eventos.flatMap(e => e.actores || []))].filter(a => !target.actores.includes(a));
+    const wrongPool = otherActores.sort(() => Math.random() - 0.5).slice(0, 3);
+    if (wrongPool.length) {
+      const opts = [actorCorrecto, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `👤 ¿Quién participó en este evento?\n\n"${target.titulo}"`,
+        options: opts,
+        correct: actorCorrecto,
+        explanation: `En "${target.titulo}" participó: ${target.actores.join(', ')}.`,
+        timeSec: 22,
+      });
+    }
+  }
+
+  // ── Q: ¿A qué arco narrativo pertenece este evento? ──
+  const arcTitles = [...new Set(arcos.map(a => a.titulo).filter(Boolean))];
+  const conArco = eventos.filter(e => hasVal(e.titulo) && hasVal(e._arcoTitulo));
+  if (arcTitles.length >= 2 && conArco.length >= 2) {
+    const target = conArco[Math.floor(Math.random() * conArco.length)];
+    const wrongArcos = arcTitles.filter(t => t !== target._arcoTitulo).sort(() => Math.random() - 0.5).slice(0, 3);
+    if (wrongArcos.length) {
+      const opts = [target._arcoTitulo, ...wrongArcos].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `📖 ¿A qué arco narrativo pertenece este evento?\n\n"${target.titulo}"`,
+        options: opts,
+        correct: target._arcoTitulo,
+        explanation: `El evento "${target.titulo}" pertenece al arco "${target._arcoTitulo}".`,
+        timeSec: 20,
+      });
+    }
+  }
+
+  // ── Q: Ordenar los eventos de una secuencia narrativa ──
+  const secuenciasConEventos = [];
+  arcos.forEach((arc) => {
+    (arc.secuencias || []).forEach((seq) => {
+      const evs = (seq.eventos || []).filter(e => hasVal(e.titulo));
+      if (evs.length >= 3) secuenciasConEventos.push({ titulo: seq.titulo || arc.titulo, evs });
+    });
+  });
+  if (secuenciasConEventos.length) {
+    const target = secuenciasConEventos[Math.floor(Math.random() * secuenciasConEventos.length)];
+    const items = target.evs.map(e => e.titulo);
+    const shuffled = [...items].sort(() => Math.random() - 0.5);
+    qs.push({
+      type: 'sort',
+      question: `📜 Ordena los eventos de "${target.titulo}" según ocurrieron`,
+      items: shuffled,
+      correct: items,
+      explanation: 'El orden refleja la secuencia narrativa original de los eventos.',
+      timeSec: 40,
+    });
+  }
+
+  // ── Q: Clasifica los eventos según su tipo ──
+  const tipos = [...new Set(eventos.map(e => e.tipo).filter(Boolean))];
+  if (tipos.length >= 2 && eventos.length >= 4) {
+    const sample = eventos.filter(e => e.tipo && e.titulo).slice(0, 8);
+    const buckets = tipos.slice(0, 4).map(t => ({
+      label: t.charAt(0).toUpperCase() + t.slice(1),
+      chips: [],
+      correct: sample.filter(e => e.tipo === t).map(e => e.titulo),
+    }));
+    const correctMap = {};
+    sample.forEach(e => {
+      const bucket = buckets.find(b => b.correct.includes(e.titulo));
+      if (bucket) correctMap[e.titulo] = bucket.label;
+    });
+    qs.push({
+      type: 'group',
+      question: '🗂️ Clasifica cada evento según su tipo',
+      chips: sample.map(e => e.titulo).sort(() => Math.random() - 0.5),
+      buckets,
+      correctMap,
+      explanation: 'Cada evento corresponde a un tipo narrativo específico dentro del arco.',
+      timeSec: 45,
+    });
+  }
+
+  // Fallback con datos de la fuente
+  const fuente = d.fuente || {};
+  if (qs.length === 0 && hasVal(fuente.titulo)) {
+    qs.push({
+      type: 'choice',
+      question: '📚 ¿Cuál es el título de esta fuente narrativa?',
+      options: shuffleWith(fuente.titulo, ['Sin título definido', 'Es un relato anónimo', 'El título no está disponible']),
+      correct: fuente.titulo,
+      explanation: `Esta narrativa proviene de la fuente: "${fuente.titulo}".`,
+      timeSec: 20,
+    });
+  }
+
+  return qs;
+}
+
+/* ── PROCEDIMENTAL ────────────────────────────────────────────── */
+function genQuestionsProcedimental(d) {
+  const qs = [];
+  const pasos = (d.estructura_procedimental || []).filter(p => hasVal(p.nombre_del_paso));
+
+  // ── Q: Ordenar los pasos del procedimiento ──
+  if (pasos.length >= 3) {
+    const items = pasos.map(p => p.nombre_del_paso);
+    const shuffled = [...items].sort(() => Math.random() - 0.5);
+    qs.push({
+      type: 'sort',
+      question: '⚙️ Ordena los pasos del procedimiento en su secuencia correcta',
+      items: shuffled,
+      correct: items,
+      explanation: 'El orden de los pasos refleja la secuencia operativa correcta del procedimiento.',
+      timeSec: 40,
+    });
+  }
+
+  // ── Q×3: ¿Quién es responsable de este paso? ──
+  const conResp = pasos.filter(p => hasVal(p.responsable));
+  if (conResp.length >= 2) {
+    const allResp = [...new Set(conResp.map(p => p.responsable))];
+    const sample = [...conResp].sort(() => Math.random() - 0.5).slice(0, 3);
+    sample.forEach(target => {
+      const wrongPool = allResp.filter(r => r !== target.responsable).sort(() => Math.random() - 0.5).slice(0, 3);
+      if (!wrongPool.length) return;
+      const opts = [target.responsable, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `👤 ¿Quién es responsable de este paso?\n\n"${target.nombre_del_paso}"`,
+        options: opts,
+        correct: target.responsable,
+        explanation: `El paso "${target.nombre_del_paso}" está a cargo de: ${target.responsable}.`,
+        timeSec: 20,
+      });
+    });
+  }
+
+  // ── Q: ¿Cuál es el resultado parcial esperado de este paso? ──
+  const conResultado = pasos.filter(p => hasVal(p.resultado_parcial_esperado));
+  if (conResultado.length >= 2) {
+    const target = conResultado[Math.floor(Math.random() * conResultado.length)];
+    const wrongPool = conResultado
+      .filter(p => p.nombre_del_paso !== target.nombre_del_paso)
+      .map(p => p.resultado_parcial_esperado)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    if (wrongPool.length) {
+      const opts = [target.resultado_parcial_esperado, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `✓ ¿Cuál es el resultado parcial esperado de este paso?\n\n"${target.nombre_del_paso}"`,
+        options: opts,
+        correct: target.resultado_parcial_esperado,
+        explanation: `Al completar "${target.nombre_del_paso}" se espera: "${target.resultado_parcial_esperado}".`,
+        timeSec: 25,
+      });
+    }
+  }
+
+  // ── Q: Si se cumple / no se cumple esta condición, ¿qué sucede? ──
+  const conds = (d.condiciones_y_decisiones || []).filter(c => hasVal(c.condicion) && (hasVal(c.si_se_cumple) || hasVal(c.si_no_se_cumple)));
+  if (conds.length >= 2) {
+    const target = conds[Math.floor(Math.random() * conds.length)];
+    const useCumple = hasVal(target.si_se_cumple);
+    const correct = useCumple ? target.si_se_cumple : target.si_no_se_cumple;
+    const wrongPool = conds
+      .filter(c => c.condicion !== target.condicion)
+      .flatMap(c => [c.si_se_cumple, c.si_no_se_cumple])
+      .filter(hasVal)
+      .filter(v => v !== correct)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    if (wrongPool.length) {
+      const opts = [correct, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `🔀 Si ${useCumple ? 'se cumple' : 'NO se cumple'} la condición "${target.condicion}", ¿qué sucede?`,
+        options: opts,
+        correct,
+        explanation: `Si ${useCumple ? 'se cumple' : 'no se cumple'} "${target.condicion}": ${correct}.`,
+        timeSec: 25,
+      });
+    }
+  }
+
+  // ── Q: Clasifica: ¿es un indicador de éxito o un error común? ──
+  const crit = d.criterios_de_validacion || {};
+  const indic = crit.indicadores_de_exito || [];
+  const errs  = crit.errores_comunes || [];
+  if (indic.length >= 2 && errs.length >= 2) {
+    const allItems = [
+      ...indic.slice(0, 3).map(x => ({ label: x, bucket: 'Indicador de éxito' })),
+      ...errs.slice(0, 3).map(x => ({ label: x, bucket: 'Error común' })),
+    ];
+    const correctMap = {};
+    allItems.forEach(it => { correctMap[it.label] = it.bucket; });
+    qs.push({
+      type: 'group',
+      question: '✅ Clasifica cada elemento: ¿es un indicador de éxito o un error común?',
+      chips: allItems.map(i => i.label).sort(() => Math.random() - 0.5),
+      buckets: [
+        { label: 'Indicador de éxito', chips: [], correct: indic.slice(0, 3) },
+        { label: 'Error común',        chips: [], correct: errs.slice(0, 3) },
+      ],
+      correctMap,
+      explanation: `Indicadores de éxito: ${indic.slice(0, 3).join(', ')}. Errores comunes: ${errs.slice(0, 3).join(', ')}.`,
+      timeSec: 40,
+    });
+  }
+
+  // Fallback: objetivo general
+  const prop = d.proposito || {};
+  if (qs.length === 0 && hasVal(prop.objetivo_general)) {
+    qs.push({
+      type: 'choice',
+      question: '🎯 ¿Cuál es el objetivo general de este procedimiento?',
+      options: shuffleWith(prop.objetivo_general, ['No se define un objetivo claro', 'El objetivo es solo informativo', 'No aplica a este procedimiento']),
+      correct: prop.objetivo_general,
+      explanation: `El objetivo general es: "${prop.objetivo_general}".`,
+      timeSec: 25,
+    });
+  }
+
+  return qs;
+}
+
+/* ── PRESCRIPTIVO / NORMATIVO ─────────────────────────────────── */
+function genQuestionsPrescriptivo(d) {
+  const qs = [];
+  const est = d.estructura_normativa || {};
+  const mandatos = est.mandatos || [];
+  const prohibs  = est.prohibiciones || [];
+  const perms    = est.permisos || [];
+
+  // ── Q×3: ¿Quién es responsable de este mandato? ──
+  const conResp = mandatos.filter(m => hasVal(m.responsable) && hasVal(m.descripcion));
+  if (conResp.length >= 2) {
+    const allResp = [...new Set(conResp.map(m => m.responsable))];
+    const sample = [...conResp].sort(() => Math.random() - 0.5).slice(0, 3);
+    sample.forEach(target => {
+      const wrongPool = allResp.filter(r => r !== target.responsable).sort(() => Math.random() - 0.5).slice(0, 3);
+      if (!wrongPool.length) return;
+      const opts = [target.responsable, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `👤 ¿Quién es responsable de cumplir este mandato?\n\n"${target.descripcion}"`,
+        options: opts,
+        correct: target.responsable,
+        explanation: `El mandato "${target.descripcion}" es responsabilidad de: ${target.responsable}.`,
+        timeSec: 22,
+      });
+    });
+  }
+
+  // ── Q: ¿Cuál es el plazo de este mandato? ──
+  const conPlazo = mandatos.filter(m => hasVal(m.plazos) && hasVal(m.descripcion));
+  if (conPlazo.length >= 2) {
+    const target = conPlazo[Math.floor(Math.random() * conPlazo.length)];
+    const wrongPool = conPlazo
+      .filter(m => m.descripcion !== target.descripcion)
+      .map(m => m.plazos)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    if (wrongPool.length) {
+      const opts = [target.plazos, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `⏱ ¿Cuál es el plazo asociado a este mandato?\n\n"${target.descripcion}"`,
+        options: opts,
+        correct: target.plazos,
+        explanation: `El mandato "${target.descripcion}" tiene un plazo de: ${target.plazos}.`,
+        timeSec: 22,
+      });
+    }
+  }
+
+  // ── Q: Clasifica: ¿mandato, prohibición o permiso? ──
+  const sample = [
+    ...mandatos.filter(m => hasVal(m.descripcion)).slice(0, 3).map(m => ({ label: m.descripcion, bucket: 'Mandato' })),
+    ...prohibs.filter(p => hasVal(p.descripcion)).slice(0, 3).map(p => ({ label: p.descripcion, bucket: 'Prohibición' })),
+    ...perms.filter(p => hasVal(p.descripcion)).slice(0, 3).map(p => ({ label: p.descripcion, bucket: 'Permiso' })),
+  ];
+  const bucketLabels = [...new Set(sample.map(s => s.bucket))];
+  if (bucketLabels.length >= 2 && sample.length >= 4) {
+    const correctMap = {};
+    sample.forEach(it => { correctMap[it.label] = it.bucket; });
+    qs.push({
+      type: 'group',
+      question: '⚖️ Clasifica cada disposición: ¿es un mandato, una prohibición o un permiso?',
+      chips: sample.map(s => s.label).sort(() => Math.random() - 0.5),
+      buckets: bucketLabels.map(b => ({ label: b, chips: [], correct: sample.filter(s => s.bucket === b).map(s => s.label) })),
+      correctMap,
+      explanation: 'Cada disposición normativa se clasifica según si obliga (mandato), prohíbe o autoriza (permiso) una conducta.',
+      timeSec: 45,
+    });
+  }
+
+  // ── Q: ¿Cuál es la gravedad de esta infracción? ──
+  const infracs = (d.regimen_sancionatorio || {}).infracciones || [];
+  const conGrav = infracs.filter(i => hasVal(i.gravedad) && hasVal(i.descripcion));
+  if (conGrav.length >= 2) {
+    const gravedades = [...new Set(conGrav.map(i => i.gravedad))];
+    if (gravedades.length >= 2) {
+      const target = conGrav[Math.floor(Math.random() * conGrav.length)];
+      const opts = [...gravedades].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `⚠️ ¿Cuál es la gravedad de esta infracción?\n\n"${target.descripcion}"`,
+        options: opts,
+        correct: target.gravedad,
+        explanation: `La infracción "${target.descripcion}" está clasificada como ${target.gravedad}.`,
+        timeSec: 20,
+      });
+    }
+  }
+
+  // ── Q: ¿A quién afecta esta prohibición? ──
+  const conSujeto = prohibs.filter(p => hasVal(p.sujeto_afectado) && hasVal(p.descripcion));
+  if (conSujeto.length >= 2) {
+    const allSujetos = [...new Set(conSujeto.map(p => p.sujeto_afectado))];
+    const target = conSujeto[Math.floor(Math.random() * conSujeto.length)];
+    const wrongPool = allSujetos.filter(s => s !== target.sujeto_afectado).sort(() => Math.random() - 0.5).slice(0, 3);
+    if (wrongPool.length) {
+      const opts = [target.sujeto_afectado, ...wrongPool].sort(() => Math.random() - 0.5);
+      qs.push({
+        type: 'choice',
+        question: `🚫 ¿A quién afecta esta prohibición?\n\n"${target.descripcion}"`,
+        options: opts,
+        correct: target.sujeto_afectado,
+        explanation: `Esta prohibición afecta a: ${target.sujeto_afectado}.`,
+        timeSec: 20,
+      });
+    }
+  }
+
+  // Fallback: objetivo general del fundamento normativo
+  const fund = d.fundamento_normativo || {};
+  if (qs.length === 0 && hasVal(fund.objetivo_general)) {
+    qs.push({
+      type: 'choice',
+      question: '⚖️ ¿Cuál es el objetivo general de esta norma?',
+      options: shuffleWith(fund.objetivo_general, ['No se define un objetivo', 'El objetivo es meramente simbólico', 'No aplica a este documento']),
+      correct: fund.objetivo_general,
+      explanation: `El objetivo general es: "${fund.objetivo_general}".`,
+      timeSec: 25,
+    });
+  }
+
+  return qs;
+}
+
 /* ── DISPATCHER ───────────────────────────────────────────────── */
 function genQuestions(data, tipo) {
   const generators = {
@@ -357,9 +752,9 @@ function genQuestions(data, tipo) {
     matutina:            genQuestionsMatutina,
     ensenanzas:          genQuestionsEnsenanzas,
     academico:           genQuestionsAcademico,
-    narrativa_historica: genQuestionsAcademico,
-    procedimental:       genQuestionsAcademico,
-    prescriptivo:        genQuestionsAcademico,
+    narrativa_historica: genQuestionsNarrativa,
+    procedimental:       genQuestionsProcedimental,
+    prescriptivo:        genQuestionsPrescriptivo,
   };
   const fn = generators[tipo] || genQuestionsAcademico;
   return fn(data).filter(Boolean);

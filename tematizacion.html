@@ -59,6 +59,8 @@
 
   .add-contenido-btn { width: 100%; margin-top: 0.6rem; padding: 0.5rem; border: 1.5px dashed #a5b4fc; border-radius: 8px; background: #e0e7ff; color: #4f46e5; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
   .add-contenido-btn:hover { background: #c7d2fe; }
+  .mix-quiz-btn { width: 100%; margin-top: 0.5rem; padding: 0.55rem 0.75rem; border: none; border-radius: 9px; background: #4f46e5; color: #fff; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+  .mix-quiz-btn:hover { background: #4338ca; }
 
   /* Buttons */
   .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.15s; text-decoration: none; }
@@ -71,14 +73,14 @@
   .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 
   /* Modal */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
   .modal-overlay.open { display: flex; }
-  .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); overflow: hidden; }
-  .modal-header { padding: 1.25rem 1.5rem 0; }
+  .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); overflow: hidden; display: flex; flex-direction: column; max-height: calc(100vh - 2rem); }
+  .modal-header { padding: 1.25rem 1.5rem 0; flex-shrink: 0; }
   .modal-header h3 { font-size: 1.05rem; font-weight: 600; }
   .modal-header p { font-size: 0.82rem; color: #6b7280; margin-top: 0.2rem; }
 
-  .tab-bar { display: flex; gap: 0; margin: 1rem 1.5rem 0; border: 1.5px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+  .tab-bar { display: flex; gap: 0; margin: 1rem 1.5rem 0; border: 1.5px solid #e5e7eb; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
   .tab-btn { flex: 1; padding: 0.55rem; font-size: 0.85rem; font-weight: 500; border: none; background: transparent; cursor: pointer; color: #6b7280; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
   .tab-btn.active { background: #4f46e5; color: #fff; }
   .tab-btn:not(.active):hover { background: #f3f4f6; }
@@ -100,7 +102,7 @@
   .form-group input:focus { border-color: #4f46e5; }
 
   .paste-label { font-size: 0.82rem; color: #374151; font-weight: 500; margin-bottom: 0.4rem; }
-  .paste-area { width: 100%; min-height: 160px; padding: 0.75rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.82rem; font-family: 'Courier New', monospace; resize: vertical; outline: none; transition: border 0.15s; color: #1a1a2e; line-height: 1.5; }
+  .paste-area { width: 100%; height: 130px; min-height: 80px; max-height: 200px; padding: 0.75rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.82rem; font-family: 'Courier New', monospace; resize: vertical; outline: none; transition: border 0.15s; color: #1a1a2e; line-height: 1.5; }
   .paste-area:focus { border-color: #4f46e5; }
   .paste-area.error { border-color: #ef4444; background: #fef2f2; }
   .paste-area.ok { border-color: #22c55e; background: #f0fdf4; }
@@ -108,7 +110,9 @@
   .paste-feedback.error { color: #dc2626; }
   .paste-feedback.ok { color: #166534; }
 
-  .modal-footer { padding: 0 1.5rem 1.25rem; display: flex; justify-content: flex-end; gap: 0.6rem; }
+
+  .modal-body { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+  .modal-footer { padding: 0.75rem 1.5rem 1.25rem; display: flex; justify-content: flex-end; gap: 0.6rem; border-top: 1px solid #f3f4f6; flex-shrink: 0; }
 
   /* Selector de contenidos modal */
   .contents-selector { display: flex; flex-direction: column; gap: 0.5rem; padding: 1.25rem 1.5rem; max-height: 340px; overflow-y: auto; }
@@ -130,6 +134,34 @@
   .template-box select:focus { border-color: #4f46e5; }
   .btn-template { width: 100%; background: #4f46e5; color: #fff; border: none; border-radius: 8px; padding: 0.55rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
   .btn-template:hover { background: #4338ca; }
+
+  /* ── Sistema de clave ── */
+  .premium-badge { display:inline-flex; align-items:center; gap:0.35rem; background:#fef3c7; border:1.5px solid #fcd34d; color:#92400e; border-radius:8px; padding:0.3rem 0.7rem; font-size:0.75rem; font-weight:600; margin-bottom:0.6rem; }
+  .unlock-bar { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; padding:1rem 1.25rem; margin:0 1.5rem 0.5rem; }
+  .unlock-bar.unlocked { background:#f0fdf4; border-color:#86efac; }
+  .unlock-bar-title { font-size:0.8rem; font-weight:600; color:#374151; margin-bottom:0.6rem; display:flex; align-items:center; gap:0.4rem; }
+  .unlock-bar.unlocked .unlock-bar-title { color:#166534; }
+  .unlock-row { display:flex; gap:0.5rem; align-items:center; }
+  .unlock-input { flex:1; padding:0.45rem 0.65rem; border:1.5px solid #d1d5db; border-radius:8px; font-size:0.82rem; font-family:'Courier New',monospace; outline:none; transition:border 0.15s; letter-spacing:0.08em; text-transform:uppercase; }
+  .unlock-input:focus { border-color:#4f46e5; }
+  .unlock-input.ok  { border-color:#22c55e; background:#f0fdf4; }
+  .unlock-input.err { border-color:#ef4444; background:#fef2f2; }
+  .unlock-btn { padding:0.45rem 0.9rem; border-radius:8px; border:none; background:#4f46e5; color:#fff; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .unlock-btn:hover { background:#4338ca; }
+  .unlock-fb { font-size:0.72rem; margin-top:0.3rem; min-height:1rem; }
+  .unlock-fb.ok  { color:#166534; }
+  .unlock-fb.err { color:#dc2626; }
+  /* info ventana de tiempo */
+  .time-hint { font-size:0.72rem; color:#6b7280; margin-bottom:0.5rem; line-height:1.4; }
+  .time-hint span { font-weight:600; color:#4f46e5; }
+  /* Bloqueado */
+  .blocked-msg { text-align:center; padding:1.5rem 1rem; color:#9ca3af; font-size:0.82rem; }
+  .blocked-msg .bm-icon { font-size:1.5rem; margin-bottom:0.4rem; }
+  /* Devcode (solo app) */
+  .devcode-row { display:flex; gap:0.5rem; align-items:center; margin-bottom:0.6rem; }
+  .devcode-box { flex:1; background:#f1f5f9; border:1.5px solid #cbd5e1; border-radius:8px; padding:0.4rem 0.65rem; font-family:'Courier New',monospace; font-size:0.63rem; color:#1e293b; word-break:break-all; line-height:1.5; }
+  .copy-devcode-btn { font-size:0.72rem; padding:0.25rem 0.6rem; border-radius:6px; border:1px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; white-space:nowrap; }
+  .copy-devcode-btn:hover { background:#f1f5f9; }
 </style>
   <script src="_nav.js"></script>
   <script src="cordova.js" onerror="void 0"></script>
@@ -245,6 +277,7 @@
       <p id="selectorSub">Selecciona el contenido que quieres ver</p>
     </div>
     <div class="contents-selector" id="contentsSelectorList"></div>
+    <button class="mix-quiz-btn" id="selectorMixBtn" style="display:none; margin:0 1.5rem 1rem;" onclick="openMixQuiz(); closeModal('modalContenidoSelector');">🎯 Prueba Mix — combinar todos los contenidos</button>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalContenidoSelector')">Cancelar</button>
       <button class="btn btn-primary" onclick="openLoaderMulti(window.__selectorType); closeModal('modalContenidoSelector');">+ Agregar nuevo</button>
@@ -260,6 +293,7 @@
       <p id="loaderSub">Elige cómo quieres ingresar el contenido</p>
     </div>
 
+    <div class="modal-body">
     <!-- Nombre para contenido -->
     <div id="nameGroup" style="padding: 0.75rem 1.5rem 0; display:none;">
       <div class="form-group">
@@ -274,7 +308,43 @@
       <div id="templateTypeGroup" style="display:none;">
         <select id="templateTypeSelect"></select>
       </div>
-      <button type="button" class="btn-template" onclick="copyTemplate()">Copiar JSON de ejemplo</button>
+      <div id="templateBtnLocked">
+        <div class="premium-badge">🔒 Función de pago</div>
+        <button type="button" class="btn-template" style="background:#9ca3af;cursor:not-allowed;" disabled>Copiar JSON de ejemplo</button>
+      </div>
+      <div id="templateBtnUnlocked" style="display:none;">
+        <button type="button" class="btn-template" onclick="copyTemplate()">Copiar JSON de ejemplo</button>
+      </div>
+    </div>
+
+
+    <!-- Barra de desbloqueo -->
+    <div id="unlockBar" class="unlock-bar" style="display:none;">
+      <div class="unlock-bar-title" id="unlockBarTitle">🔒 Funciones de pago</div>
+      <!-- Modo app: huella de dispositivo -->
+      <div id="modeApp" style="display:none;">
+        <div class="time-hint">Copia tu código y envíalo al administrador para recibir tu clave.</div>
+        <div class="devcode-row">
+          <div class="devcode-box" id="devCodeDisplay">Calculando…</div>
+          <button class="copy-devcode-btn" onclick="copyDevCode()">📋 Copiar</button>
+        </div>
+      </div>
+      <!-- Modo navegador: clave temporal -->
+      <div id="modeBrowser" style="display:none;">
+        <div class="time-hint" id="timeHint">El administrador te indicará el momento exacto.<br>Tendrás <span>5 minutos</span> para ingresar la clave.</div>
+      </div>
+      <!-- Input compartido -->
+      <div id="unlockInputArea">
+        <div class="unlock-row">
+          <input class="unlock-input" id="unlockKeyInput" placeholder="XXXX-XXXX" oninput="onUnlockInput()">
+          <button class="unlock-btn" onclick="tryUnlock()">🔓 Activar</button>
+        </div>
+        <div class="unlock-fb" id="unlockFb"></div>
+      </div>
+      <!-- Activo -->
+      <div id="unlockActive" style="display:none; font-size:0.82rem; color:#166534; display:none; align-items:center; gap:0.4rem;">
+        ✅ Funciones activas <span id="unlockActiveDetail"></span>
+      </div>
     </div>
 
     <div class="tab-bar">
@@ -295,14 +365,59 @@
     </div>
 
     <div class="tab-panel" id="panelPaste">
-      <div class="paste-label">Pega aquí el contenido JSON:</div>
-      <textarea class="paste-area" id="pasteArea" placeholder='{ "arcos": [ ... ] }' oninput="validatePaste()"></textarea>
-      <div class="paste-feedback" id="pasteFeedback"></div>
+      <div id="pasteLockedMsg" class="blocked-msg">
+        <div class="bm-icon">🔒</div>
+        <div>Función de pago.<br>Ingresa tu clave arriba para habilitarla.</div>
+      </div>
+      <div id="pasteUnlockedContent" style="display:none;">
+        <div class="paste-label">Pega aquí el contenido JSON:</div>
+        <textarea class="paste-area" id="pasteArea" placeholder='{ "arcos": [ ... ] }' oninput="validatePaste()"></textarea>
+        <div class="paste-feedback" id="pasteFeedback"></div>
+      </div>
     </div>
 
+    </div><!-- /.modal-body -->
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeLoader()">Cancelar</button>
       <button class="btn btn-primary" id="btnSave" onclick="saveLoader()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de clave — función de pago para Exportar -->
+<div class="modal-overlay" id="modalUnlockExport">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header" style="padding:1.25rem 1.5rem 0;">
+      <h3>🔒 Función de pago</h3>
+      <p id="unlockReasonText">Exportar esta clase requiere una clave de activación</p>
+    </div>
+    <div class="modal-body" style="padding:0 1.5rem;">
+      <div class="unlock-bar" id="unlockBarExp" style="margin:1rem 0;">
+        <div class="unlock-bar-title" id="unlockBarTitleExp">🔒 Función de pago</div>
+        <div id="modeAppExp" style="display:none;">
+          <div class="time-hint">Copia tu código y envíalo al administrador para recibir tu clave.</div>
+          <div class="devcode-row">
+            <div class="devcode-box" id="devCodeDisplayExp">Calculando…</div>
+            <button class="copy-devcode-btn" onclick="copyDevCode()">📋 Copiar</button>
+          </div>
+        </div>
+        <div id="modeBrowserExp" style="display:none;">
+          <div class="time-hint" id="timeHintExp">El administrador te indicará el momento exacto.<br>Tendrás <span>5 minutos</span> para ingresar la clave.</div>
+        </div>
+        <div id="unlockInputAreaExp">
+          <div class="unlock-row">
+            <input class="unlock-input" id="unlockKeyInputExp" placeholder="XXXX-XXXX" oninput="onUnlockInputExp()">
+            <button class="unlock-btn" onclick="tryUnlockExp()">🔓 Activar</button>
+          </div>
+          <div class="unlock-fb" id="unlockFbExp"></div>
+        </div>
+        <div id="unlockActiveExp" style="display:none; align-items:center; gap:0.4rem; font-size:0.82rem; color:#166534;">
+          ✅ Funciones activas <span id="unlockActiveDetailExp"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalUnlockExport')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -323,6 +438,9 @@ document.getElementById('headerSubject').textContent = subject ? `${subject.icon
 document.getElementById('headerClass').textContent   = cls ? cls.name : 'Clase';
 
 function getKey(type) { return `${KEY_PREFIX}_${type}`; }
+
+// ── Límite de la versión gratuita: máximo de ítems por sección ──────
+const MAX_ITEMS_PER_TYPE = 2; // contenido / glosario / cuestionario, por clase
 
 // ── Sistema multi-item (Contenido, Glosario, Cuestionario) ─────────
 // Cada tipo tiene un índice: KEY_PREFIX_{type}s_index → [{ id, name, detectedType? }]
@@ -398,6 +516,21 @@ function renderMultiList(type) {
       <button class="ci-del" onclick="deleteMultiItem('${type}','${item.id}')">✕</button>
     </div>`;
   }).join('');
+
+  if (type === 'contenido' && list.length >= 2) {
+    const existing = document.getElementById('mixQuizBtn');
+    if (!existing) {
+      const mixBtn = document.createElement('button');
+      mixBtn.id = 'mixQuizBtn';
+      mixBtn.className = 'mix-quiz-btn';
+      mixBtn.innerHTML = '🎯 Prueba Mix — combinar todos los contenidos';
+      mixBtn.onclick = openMixQuiz;
+      listEl.appendChild(mixBtn);
+    }
+  } else {
+    const existing = document.getElementById('mixQuizBtn');
+    if (existing) existing.remove();
+  }
 }
 
 function openMultiItem(type, id) {
@@ -447,6 +580,8 @@ function openMultiSelector(type) {
       <span class="cs-arrow">›</span>
     </div>`;
   }).join('');
+  const mixBtn = document.getElementById('selectorMixBtn');
+  if (mixBtn) mixBtn.style.display = (type === 'contenido' && list.length >= 2) ? 'block' : 'none';
   openModal('modalContenidoSelector');
 }
 
@@ -904,7 +1039,14 @@ const TITLES = {
   tematizacion: { title: 'Cargar Tematización', sub: 'FormatoTematizacion.json' },
 };
 
-function openLoaderMulti(type) {
+async function openLoaderMulti(type) {
+  await initDevUnlock();
+  const list = loadIndex(type);
+  if (!_unlocked && list.length >= MAX_ITEMS_PER_TYPE) {
+    requireUnlock(() => openLoaderMulti(type),
+      `🔒 Límite gratuito: máximo ${MAX_ITEMS_PER_TYPE} ${MULTI_CFG[type].label.toLowerCase()}s por clase. Ingresa tu clave para agregar más.`);
+    return;
+  }
   currentType    = type;
   parsedFileData = null; pasteValid = false; autoFilename = '';
   document.getElementById('pasteArea').value = '';
@@ -928,6 +1070,7 @@ function openLoaderMulti(type) {
 function openLoader(type) {
   currentType = type;
   parsedFileData = null; pasteValid = false;
+  initDevUnlock();
   document.getElementById('pasteArea').value = '';
   document.getElementById('pasteArea').className = 'paste-area';
   document.getElementById('pasteFeedback').textContent = '';
@@ -942,6 +1085,318 @@ function openLoader(type) {
 }
 
 function closeLoader() { closeModal('modalLoader'); currentType = null; }
+
+
+// ════════════════════════════════════════════════════════════════
+// SISTEMA DE CLAVE — dual: app (huella) o navegador (tiempo)
+// ════════════════════════════════════════════════════════════════
+const _SALT = 'EST2025XZ'; // sal interna, no visible para el usuario
+
+// Detecta si corre como app Cordova/APK o como navegador normal
+function isApp() {
+  return !!(window.cordova || window.PhoneGap || window.phonegap ||
+            (typeof window.device !== 'undefined') ||
+            /^file:\/\//.test(location.protocol) === false && window.cordova);
+}
+// file:// sin cordova = navegador local; https:// = web
+function isBrowser() { return !isApp(); }
+
+// ── Modo APP: huella de dispositivo ──────────────────────────────
+let _deviceFp = null;
+let _devUnlocked = false;
+
+async function getDeviceFingerprint() {
+  const parts = [
+    navigator.userAgent, navigator.language,
+    screen.width + 'x' + screen.height, screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    (navigator.hardwareConcurrency || ''), (navigator.platform || '')
+  ];
+  const raw = parts.join('||');
+  // SHA-256 si disponible (https), fallback simple para file://
+  if (crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+    const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    return hex.substring(0,48).toUpperCase().match(/.{1,8}/g).join('-');
+  } else {
+    // fallback sin crypto.subtle
+    let h = 0;
+    for (let i = 0; i < raw.length; i++) { h = (Math.imul(31, h) + raw.charCodeAt(i)) | 0; }
+    const hex = (h >>> 0).toString(16).padStart(8,'0').toUpperCase();
+    return hex.match(/.{1,2}/g).join('').padEnd(48,'0').match(/.{1,8}/g).join('-');
+  }
+}
+
+async function computeDeviceKey(fp) {
+  const base = fp.replace(/-/g,'').substring(0,16) + _SALT;
+  if (crypto.subtle) {
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(_SALT),
+      {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', km, new TextEncoder().encode(fp.replace(/-/g,'').substring(0,16)));
+    const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    return hex.substring(0,4)+'-'+hex.substring(4,8);
+  } else {
+    let h = 0;
+    for (let i=0; i<base.length; i++) { h = (Math.imul(31,h)+base.charCodeAt(i))|0; }
+    const hex = (h>>>0).toString(16).padStart(8,'0').toUpperCase();
+    return hex.substring(0,4)+'-'+hex.substring(4,8);
+  }
+}
+
+// ── Modo NAVEGADOR: clave por ventana de tiempo (5 min) ──────────
+// La ventana es el bloque de 5 min al que pertenece el momento actual.
+// Clave = hash( SALT + año + mes + dia + hora + bloque5min )
+// Así dos dispositivos en el mismo instante tienen la misma clave temporal.
+function currentTimeBlock() {
+  const n = new Date();
+  const Y = n.getFullYear();
+  const M = String(n.getMonth()+1).padStart(2,'0');
+  const D = String(n.getDate()).padStart(2,'0');
+  const H = String(n.getHours()).padStart(2,'0');
+  const B = String(Math.floor(n.getMinutes()/5)).padStart(2,'0'); // bloque 0-11
+  return `${Y}${M}${D}${H}${B}`;
+}
+
+function simpleHash(str) {
+  let h = 5381;
+  for (let i=0; i<str.length; i++) h = ((h<<5)+h) ^ str.charCodeAt(i);
+  return (h>>>0).toString(16).padStart(8,'0').toUpperCase();
+}
+
+function computeTimeKey(block) {
+  const raw = _SALT + block;
+  const hex = simpleHash(raw);
+  return hex.substring(0,4)+'-'+hex.substring(4,8);
+}
+
+// También acepta el bloque anterior (por si el admin dio la clave justo al cambiar)
+function validTimeKeys() {
+  const now = currentTimeBlock();
+  const prev = (() => {
+    const n = new Date(Date.now() - 5*60*1000);
+    const Y=n.getFullYear(), M=String(n.getMonth()+1).padStart(2,'0'),
+          D=String(n.getDate()).padStart(2,'0'), H=String(n.getHours()).padStart(2,'0'),
+          B=String(Math.floor(n.getMinutes()/5)).padStart(2,'0');
+    return `${Y}${M}${D}${H}${B}`;
+  })();
+  return [computeTimeKey(now), computeTimeKey(prev)];
+}
+
+// ── Estado de desbloqueo ─────────────────────────────────────────
+let _unlocked = false;
+let _unlockMode = 'browser'; // 'browser' | 'app'
+
+function applyUnlockState() {
+  const bar = document.getElementById('unlockBar');
+  if (!bar) return;
+  bar.style.display = 'block';
+
+  if (_unlocked) {
+    bar.classList.add('unlocked');
+    document.getElementById('unlockBarTitle').textContent = '✅ Funciones activas';
+    document.getElementById('unlockInputArea').style.display = 'none';
+    document.getElementById('modeApp').style.display = 'none';
+    document.getElementById('modeBrowser').style.display = 'none';
+    const act = document.getElementById('unlockActive');
+    act.style.display = 'flex';
+    document.getElementById('unlockActiveDetail').textContent =
+      _unlockMode === 'app' ? 'en este dispositivo' : 'para esta sesión';
+    // Pegar JSON
+    document.getElementById('pasteLockedMsg').style.display = 'none';
+    document.getElementById('pasteUnlockedContent').style.display = 'block';
+    // Copiar plantilla
+    document.getElementById('templateBtnLocked').style.display = 'none';
+    document.getElementById('templateBtnUnlocked').style.display = 'block';
+  } else {
+    bar.classList.remove('unlocked');
+    document.getElementById('unlockBarTitle').textContent = '🔒 Funciones de pago';
+    document.getElementById('unlockInputArea').style.display = 'block';
+    document.getElementById('unlockActive').style.display = 'none';
+    if (_unlockMode === 'app') {
+      document.getElementById('modeApp').style.display = 'block';
+      document.getElementById('modeBrowser').style.display = 'none';
+    } else {
+      document.getElementById('modeApp').style.display = 'none';
+      document.getElementById('modeBrowser').style.display = 'block';
+    }
+    // Pegar JSON
+    document.getElementById('pasteLockedMsg').style.display = 'block';
+    document.getElementById('pasteUnlockedContent').style.display = 'none';
+    // Copiar plantilla
+    document.getElementById('templateBtnLocked').style.display = 'block';
+    document.getElementById('templateBtnUnlocked').style.display = 'none';
+  }
+  applyExportUnlockState();
+}
+
+// ── Réplica del estado de clave para el modal de Exportar ────────
+let _pendingUnlockAction = null;
+
+function applyExportUnlockState() {
+  const bar = document.getElementById('unlockBarExp');
+  if (!bar) return;
+  if (_unlocked) {
+    bar.classList.add('unlocked');
+    document.getElementById('unlockBarTitleExp').textContent = '✅ Funciones activas';
+    document.getElementById('unlockInputAreaExp').style.display = 'none';
+    document.getElementById('modeAppExp').style.display = 'none';
+    document.getElementById('modeBrowserExp').style.display = 'none';
+    const act = document.getElementById('unlockActiveExp');
+    act.style.display = 'flex';
+    document.getElementById('unlockActiveDetailExp').textContent =
+      _unlockMode === 'app' ? 'en este dispositivo' : 'para esta sesión';
+  } else {
+    bar.classList.remove('unlocked');
+    document.getElementById('unlockBarTitleExp').textContent = '🔒 Función de pago';
+    document.getElementById('unlockInputAreaExp').style.display = 'block';
+    document.getElementById('unlockActiveExp').style.display = 'none';
+    if (_unlockMode === 'app') {
+      document.getElementById('modeAppExp').style.display = 'block';
+      document.getElementById('modeBrowserExp').style.display = 'none';
+    } else {
+      document.getElementById('modeAppExp').style.display = 'none';
+      document.getElementById('modeBrowserExp').style.display = 'block';
+    }
+  }
+}
+
+function onUnlockInputExp() {
+  const inp = document.getElementById('unlockKeyInputExp');
+  const fb  = document.getElementById('unlockFbExp');
+  const val = inp.value.trim().toUpperCase();
+  if (!val) { inp.className='unlock-input'; fb.textContent=''; return; }
+  const fmt = /^[A-F0-9]{4}-[A-F0-9]{4}$/;
+  if (fmt.test(val)) {
+    inp.className='unlock-input ok'; fb.textContent=''; fb.className='unlock-fb';
+  } else {
+    inp.className='unlock-input err';
+    fb.textContent='Formato: XXXX-XXXX'; fb.className='unlock-fb err';
+  }
+}
+
+async function tryUnlockExp() {
+  const entered = (document.getElementById('unlockKeyInputExp').value||'').trim().toUpperCase();
+  if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
+
+  let valid = false;
+  if (_unlockMode === 'app') {
+    if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
+    const expected = await computeDeviceKey(_deviceFp);
+    valid = (entered === expected);
+    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+  } else {
+    const keys = validTimeKeys();
+    valid = keys.includes(entered);
+    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+  }
+
+  if (valid) {
+    _unlocked = true;
+    applyUnlockState();
+    showToast('✅ Funciones desbloqueadas');
+    closeModal('modalUnlockExport');
+    if (_pendingUnlockAction) { const fn = _pendingUnlockAction; _pendingUnlockAction = null; fn(); }
+  } else {
+    const inp = document.getElementById('unlockKeyInputExp');
+    const fb  = document.getElementById('unlockFbExp');
+    inp.className='unlock-input err';
+    fb.textContent='❌ Clave incorrecta'; fb.className='unlock-fb err';
+    showToast('❌ Clave incorrecta');
+  }
+}
+
+// Punto de entrada: exige clave activa antes de ejecutar `action`.
+// Si ya está desbloqueado (mismo mecanismo que copiar/pegar JSON), ejecuta de inmediato.
+async function requireUnlock(action, reason) {
+  await initDevUnlock(); // refresca estado por si se desbloqueó desde el modal de Cargar JSON
+  if (_unlocked) { action(); return; }
+  _pendingUnlockAction = action;
+  const reasonEl = document.getElementById('unlockReasonText');
+  if (reasonEl) reasonEl.textContent = reason || 'Exportar esta clase requiere una clave de activación';
+  const inp = document.getElementById('unlockKeyInputExp');
+  inp.value = ''; inp.className = 'unlock-input';
+  document.getElementById('unlockFbExp').textContent = '';
+  openModal('modalUnlockExport');
+}
+
+async function initDevUnlock() {
+  // Determinar modo
+  _unlockMode = isApp() ? 'app' : 'browser';
+
+  if (_unlockMode === 'app') {
+    _deviceFp = await getDeviceFingerprint();
+    const el = document.getElementById('devCodeDisplay');
+    if (el) el.textContent = _deviceFp;
+    // Verificar si ya fue desbloqueado permanentemente
+    const saved = localStorage.getItem('study_devkey_unlock');
+    if (saved === _deviceFp) { _unlocked = true; }
+  } else {
+    // Navegador: nunca se guarda permanentemente, solo sesión
+    const sess = sessionStorage.getItem('study_session_unlock');
+    if (sess === 'true') { _unlocked = true; }
+  }
+  applyUnlockState();
+}
+
+function copyDevCode() {
+  if (!_deviceFp) { showToast('⚠️ Código aún calculando'); return; }
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = _deviceFp; ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('📋 Código copiado'); } catch {}
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(_deviceFp).then(()=>showToast('📋 Código copiado')).catch(fallback);
+  else fallback();
+}
+
+function onUnlockInput() {
+  const inp = document.getElementById('unlockKeyInput');
+  const fb  = document.getElementById('unlockFb');
+  const val = inp.value.trim().toUpperCase();
+  if (!val) { inp.className='unlock-input'; fb.textContent=''; return; }
+  const fmt = /^[A-F0-9]{4}-[A-F0-9]{4}$/;
+  if (fmt.test(val)) {
+    inp.className='unlock-input ok'; fb.textContent=''; fb.className='unlock-fb';
+  } else {
+    inp.className='unlock-input err';
+    fb.textContent='Formato: XXXX-XXXX'; fb.className='unlock-fb err';
+  }
+}
+
+async function tryUnlock() {
+  const entered = (document.getElementById('unlockKeyInput').value||'').trim().toUpperCase();
+  if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
+
+  let valid = false;
+
+  if (_unlockMode === 'app') {
+    if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
+    const expected = await computeDeviceKey(_deviceFp);
+    valid = (entered === expected);
+    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+  } else {
+    // Navegador: verificar contra ventanas de tiempo actuales
+    const keys = validTimeKeys();
+    valid = keys.includes(entered);
+    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+  }
+
+  if (valid) {
+    _unlocked = true;
+    applyUnlockState();
+    showToast('✅ Funciones desbloqueadas');
+  } else {
+    const inp = document.getElementById('unlockKeyInput');
+    const fb  = document.getElementById('unlockFb');
+    inp.className='unlock-input err';
+    fb.textContent='❌ Clave incorrecta'; fb.className='unlock-fb err';
+    showToast('❌ Clave incorrecta');
+  }
+}
+// ════════════════════════════════════════════════════════════════
 
 function switchTab(tab) {
   currentTab = tab;
@@ -1009,6 +1464,7 @@ function saveLoader() {
     if (!parsedFileData) { showToast('⚠️ Selecciona un archivo JSON válido primero'); return; }
     data = parsedFileData;
   } else {
+    if (!_unlocked) { showToast('🔒 Activa tu clave para usar esta función'); return; }
     if (!pasteValid) { showToast('⚠️ El JSON pegado no es válido'); return; }
     data = JSON.parse(document.getElementById('pasteArea').value.trim());
   }
@@ -1079,36 +1535,38 @@ function openSection(type) {
 }
 
 function exportClass() {
-  const sExp = { id: subjectId, name: subject ? subject.name : subjectId, icon: subject?.icon || '📘', color: subject?.color || '#4f46e5', classes: [] };
-  const clsExp = { id: classId, name: cls ? cls.name : classId, data: {} };
-  // Tematización: dato único por clase
-  const tRaw = localStorage.getItem(getKey('tematizacion'));
-  if (tRaw) { try { clsExp.data.tematizacion = JSON.parse(tRaw); } catch {} }
-  // Glosario / Cuestionario (espejo legado, por compatibilidad con versiones anteriores)
-  ['glosario','cuestionario'].forEach(t => {
-    const raw = localStorage.getItem(getKey(t));
-    if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
-  });
-  // Multi-item: Contenido, Glosario, Cuestionario
-  ['contenido','glosario','cuestionario'].forEach(type => {
-    const idx = loadIndex(type);
-    if (idx.length) {
-      clsExp.data[`${type}s_index`] = idx;
-      clsExp.data[`${type}_items`] = {};
-      idx.forEach(item => {
-        const d = localStorage.getItem(`${KEY_PREFIX}_${type}_${item.id}`);
-        if (d) { try { clsExp.data[`${type}_items`][item.id] = JSON.parse(d); } catch {} }
-      });
-    }
-  });
-  sExp.classes.push(clsExp);
-  const payload = { version: 1, type: 'study_export', scope: 'class', exportedAt: new Date().toISOString(), subjects: [sExp] };
-  const slug = (cls?.name || 'clase').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-  const filename = `clase_${slug}.json`;
-  STUDY.shareFile(payload, filename, {
-    message: `Clase "${cls ? cls.name : classId}" - Sistema de Estudio`,
-    subject: filename,
-    onFallback: () => showToast('Clase exportada')
+  requireUnlock(() => {
+    const sExp = { id: subjectId, name: subject ? subject.name : subjectId, icon: subject?.icon || '📘', color: subject?.color || '#4f46e5', classes: [] };
+    const clsExp = { id: classId, name: cls ? cls.name : classId, data: {} };
+    // Tematización: dato único por clase
+    const tRaw = localStorage.getItem(getKey('tematizacion'));
+    if (tRaw) { try { clsExp.data.tematizacion = JSON.parse(tRaw); } catch {} }
+    // Glosario / Cuestionario (espejo legado, por compatibilidad con versiones anteriores)
+    ['glosario','cuestionario'].forEach(t => {
+      const raw = localStorage.getItem(getKey(t));
+      if (raw) { try { clsExp.data[t] = JSON.parse(raw); } catch {} }
+    });
+    // Multi-item: Contenido, Glosario, Cuestionario
+    ['contenido','glosario','cuestionario'].forEach(type => {
+      const idx = loadIndex(type);
+      if (idx.length) {
+        clsExp.data[`${type}s_index`] = idx;
+        clsExp.data[`${type}_items`] = {};
+        idx.forEach(item => {
+          const d = localStorage.getItem(`${KEY_PREFIX}_${type}_${item.id}`);
+          if (d) { try { clsExp.data[`${type}_items`][item.id] = JSON.parse(d); } catch {} }
+        });
+      }
+    });
+    sExp.classes.push(clsExp);
+    const payload = { version: 1, type: 'study_export', scope: 'class', exportedAt: new Date().toISOString(), subjects: [sExp] };
+    const slug = (cls?.name || 'clase').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+    const filename = `clase_${slug}.json`;
+    STUDY.shareFile(payload, filename, {
+      message: `Clase "${cls ? cls.name : classId}" - Sistema de Estudio`,
+      subject: filename,
+      onFallback: () => showToast('Clase exportada')
+    });
   });
 }
 
@@ -1154,6 +1612,14 @@ migrateLegacyToMulti('cuestionario');
 
 // Estudiar Glosario refleja si hay al menos un glosario cargado (multi-glosario o formato antiguo)
 if (loadIndex('glosario').length > 0 || localStorage.getItem(getKey('glosario'))) updateStatus('estudio', true);
+
+// ── Prueba Mix: pasa los IDs de los contenidos a PruebaMix.html ──────
+function openMixQuiz() {
+  const list = loadIndex('contenido');
+  if (list.length < 2) { showToast('⚠️ Necesitas al menos 2 contenidos para la Prueba Mix'); return; }
+  const ids = list.map(item => item.id).join(',');
+  navTo(`PruebaMix.html?s=${subjectId}&c=${classId}&ids=${ids}`);
+}
 </script>
 </body>
 </html>
