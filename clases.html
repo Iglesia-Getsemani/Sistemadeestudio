@@ -142,7 +142,7 @@
 <!-- Modal de clave — función de pago para Exportar -->
 <div class="modal-overlay" id="modalUnlockExport">
   <div class="modal" style="max-width:420px;">
-    <h3>🔒 Función de pago</h3>
+    <h3 id="unlockModalTitle">🔒 Función de pago</h3>
     <p id="unlockReasonText" style="font-size:0.82rem; color:#6b7280; margin:-0.75rem 0 1rem;">Exportar asignaturas o clases requiere una clave de activación.</p>
     <div class="unlock-bar" id="unlockBar">
       <div class="unlock-bar-title" id="unlockBarTitle">🔒 Función de pago</div>
@@ -283,7 +283,7 @@ function saveClass() {
     save(); render(); closeModal('modalClass');
   };
   if ((subject.classes || []).length >= MAX_CLASSES_PER_SUBJECT) {
-    requireUnlock(create, `🔒 Límite gratuito: máximo ${MAX_CLASSES_PER_SUBJECT} clases por asignatura. Ingresa tu clave para crear más.`);
+    requireUnlock('import', create, `🔒 Límite gratuito: máximo ${MAX_CLASSES_PER_SUBJECT} clases por asignatura. Ingresa tu clave de importación/creación para crear más.`);
   } else {
     create();
   }
@@ -304,11 +304,14 @@ function deleteClass(id) {
 
 // ════════════════════════════════════════════════════════════════
 // SISTEMA DE CLAVE — dual: app (huella) o navegador (tiempo)
-// (Idéntico al de tematizacion.html: una misma clave desbloquea
-//  las funciones de pago en toda la app — el estado se comparte
-//  vía localStorage/sessionStorage entre todas las pantallas)
+// Dos claves INDEPENDIENTES (mismo mecanismo, distinta sal):
+//   • Clave de Importación/Creación → crear nuevas clases e importar
+//     archivos .json que superen el límite gratuito.
+//   • Clave de Exportación          → exportar asignaturas/clases.
+// El estado se comparte vía localStorage/sessionStorage entre pantallas.
 // ════════════════════════════════════════════════════════════════
-const _SALT = 'EST2025XZ'; // sal interna, no visible para el usuario
+const _SALT_IMPORT = 'EST2025XZ-IMP';
+const _SALT_EXPORT = 'EST2025XZ-EXP';
 
 function isApp() {
   return !!(window.cordova || window.PhoneGap || window.phonegap ||
@@ -318,9 +321,18 @@ function isApp() {
 function isBrowser() { return !isApp(); }
 
 let _deviceFp = null;
-let _unlocked = false;
+let _unlockedImport = false;
+let _unlockedExport = false;
 let _unlockMode = 'browser';
+let _unlockPurpose = 'export'; // qué clave está pidiendo el modal abierto ahora: 'import' | 'export'
 let _pendingUnlockAction = null;
+
+function isUnlocked(purpose) { return purpose === 'import' ? _unlockedImport : _unlockedExport; }
+
+const PURPOSE_LABEL = {
+  import: { title: '🔒 Clave de importación', locked: '🔒 Clave de importación', default: 'Esta acción requiere una clave de importación/creación.' },
+  export: { title: '🔒 Clave de exportación',  locked: '🔒 Clave de exportación',  default: 'Exportar asignaturas o clases requiere una clave de activación.' }
+};
 
 async function getDeviceFingerprint() {
   const parts = [
@@ -342,10 +354,10 @@ async function getDeviceFingerprint() {
   }
 }
 
-async function computeDeviceKey(fp) {
-  const base = fp.replace(/-/g,'').substring(0,16) + _SALT;
+async function computeDeviceKey(fp, salt) {
+  const base = fp.replace(/-/g,'').substring(0,16) + salt;
   if (crypto.subtle) {
-    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(_SALT),
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(salt),
       {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', km, new TextEncoder().encode(fp.replace(/-/g,'').substring(0,16)));
     const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
@@ -374,13 +386,13 @@ function simpleHash(str) {
   return (h>>>0).toString(16).padStart(8,'0').toUpperCase();
 }
 
-function computeTimeKey(block) {
-  const raw = _SALT + block;
+function computeTimeKey(block, salt) {
+  const raw = salt + block;
   const hex = simpleHash(raw);
   return hex.substring(0,4)+'-'+hex.substring(4,8);
 }
 
-function validTimeKeys() {
+function validTimeKeys(salt) {
   const now = currentTimeBlock();
   const prev = (() => {
     const n = new Date(Date.now() - 5*60*1000);
@@ -389,13 +401,16 @@ function validTimeKeys() {
           B=String(Math.floor(n.getMinutes()/5)).padStart(2,'0');
     return `${Y}${M}${D}${H}${B}`;
   })();
-  return [computeTimeKey(now), computeTimeKey(prev)];
+  return [computeTimeKey(now, salt), computeTimeKey(prev, salt)];
 }
 
 function applyUnlockState() {
   const bar = document.getElementById('unlockBar');
   if (!bar) return;
-  if (_unlocked) {
+  const unlocked = isUnlocked(_unlockPurpose);
+  const titleEl = document.getElementById('unlockModalTitle');
+  if (titleEl) titleEl.textContent = PURPOSE_LABEL[_unlockPurpose].title;
+  if (unlocked) {
     bar.classList.add('unlocked');
     document.getElementById('unlockBarTitle').textContent = '✅ Funciones activas';
     document.getElementById('unlockInputArea').style.display = 'none';
@@ -407,7 +422,7 @@ function applyUnlockState() {
       _unlockMode === 'app' ? 'en este dispositivo' : 'para esta sesión';
   } else {
     bar.classList.remove('unlocked');
-    document.getElementById('unlockBarTitle').textContent = '🔒 Función de pago';
+    document.getElementById('unlockBarTitle').textContent = PURPOSE_LABEL[_unlockPurpose].locked;
     document.getElementById('unlockInputArea').style.display = 'block';
     document.getElementById('unlockActive').style.display = 'none';
     if (_unlockMode === 'app') {
@@ -426,11 +441,11 @@ async function initDevUnlock() {
     _deviceFp = await getDeviceFingerprint();
     const el = document.getElementById('devCodeDisplay');
     if (el) el.textContent = _deviceFp;
-    const saved = localStorage.getItem('study_devkey_unlock');
-    if (saved === _deviceFp) { _unlocked = true; }
+    if (localStorage.getItem('study_devkey_unlock_import') === _deviceFp) _unlockedImport = true;
+    if (localStorage.getItem('study_devkey_unlock_export') === _deviceFp) _unlockedExport = true;
   } else {
-    const sess = sessionStorage.getItem('study_session_unlock');
-    if (sess === 'true') { _unlocked = true; }
+    if (sessionStorage.getItem('study_session_unlock_import') === 'true') _unlockedImport = true;
+    if (sessionStorage.getItem('study_session_unlock_export') === 'true') _unlockedExport = true;
   }
   applyUnlockState();
 }
@@ -467,20 +482,21 @@ async function tryUnlock() {
   const entered = (document.getElementById('unlockKeyInput').value||'').trim().toUpperCase();
   if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
 
+  const salt = _unlockPurpose === 'import' ? _SALT_IMPORT : _SALT_EXPORT;
   let valid = false;
   if (_unlockMode === 'app') {
     if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
-    const expected = await computeDeviceKey(_deviceFp);
+    const expected = await computeDeviceKey(_deviceFp, salt);
     valid = (entered === expected);
-    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+    if (valid) localStorage.setItem(_unlockPurpose === 'import' ? 'study_devkey_unlock_import' : 'study_devkey_unlock_export', _deviceFp);
   } else {
-    const keys = validTimeKeys();
+    const keys = validTimeKeys(salt);
     valid = keys.includes(entered);
-    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+    if (valid) sessionStorage.setItem(_unlockPurpose === 'import' ? 'study_session_unlock_import' : 'study_session_unlock_export', 'true');
   }
 
   if (valid) {
-    _unlocked = true;
+    if (_unlockPurpose === 'import') _unlockedImport = true; else _unlockedExport = true;
     applyUnlockState();
     showToast('✅ Funciones desbloqueadas');
     closeModal('modalUnlockExport');
@@ -494,13 +510,14 @@ async function tryUnlock() {
   }
 }
 
-// Punto de entrada: exige clave activa antes de ejecutar `action`.
-async function requireUnlock(action, reason) {
+// Punto de entrada: exige clave activa del tipo `purpose` ('import' | 'export') antes de ejecutar `action`.
+async function requireUnlock(purpose, action, reason) {
+  _unlockPurpose = purpose === 'import' ? 'import' : 'export';
   await initDevUnlock(); // refresca estado (puede haberse desbloqueado en otra pantalla)
-  if (_unlocked) { action(); return; }
+  if (isUnlocked(_unlockPurpose)) { action(); return; }
   _pendingUnlockAction = action;
   const reasonEl = document.getElementById('unlockReasonText');
-  if (reasonEl) reasonEl.textContent = reason || 'Exportar asignaturas o clases requiere una clave de activación.';
+  if (reasonEl) reasonEl.textContent = reason || PURPOSE_LABEL[_unlockPurpose].default;
   const inp = document.getElementById('unlockKeyInput');
   inp.value = ''; inp.className = 'unlock-input';
   document.getElementById('unlockFb').textContent = '';
@@ -510,7 +527,7 @@ async function requireUnlock(action, reason) {
 
 // ── Export ────────────────────────────────────────────────────────
 function exportSubject() {
-  requireUnlock(() => {
+  requireUnlock('export', () => {
     if (!subject) return;
     const payload = buildExportPayload([subject], 'subject');
     const filename = `asignatura_${slugify(subject.name)}.json`;
@@ -523,7 +540,7 @@ function exportSubject() {
 }
 
 function exportClass(classId) {
-  requireUnlock(() => {
+  requireUnlock('export', () => {
     const cls = subject.classes.find(c => c.id === classId);
     if (!cls) return;
     const sExp = { id: subject.id, name: subject.name, icon: subject.icon, color: subject.color, classes: [] };
@@ -608,9 +625,9 @@ function importClassFromFile(event) {
       const incomingClasses = payload.subjects.flatMap(s => s.classes || []);
       const wouldExceedClasses = (subject.classes || []).length + incomingClasses.length > MAX_CLASSES_PER_SUBJECT;
       const itemsTooMany = incomingClasses.some(cls => itemCountsExceedLimit(cls.data));
-      if (!_unlocked && (wouldExceedClasses || itemsTooMany)) {
-        requireUnlock(() => doImportClasses(payload),
-          `🔒 Esta importación supera el límite gratuito (máx. ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave para continuar.`);
+      if (!_unlockedImport && (wouldExceedClasses || itemsTooMany)) {
+        requireUnlock('import', () => doImportClasses(payload),
+          `🔒 Esta importación supera el límite gratuito (máx. ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave de importación/creación para continuar.`);
       } else {
         doImportClasses(payload);
       }

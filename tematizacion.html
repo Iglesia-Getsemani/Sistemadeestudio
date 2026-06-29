@@ -388,7 +388,7 @@
 <div class="modal-overlay" id="modalUnlockExport">
   <div class="modal" style="max-width:420px;">
     <div class="modal-header" style="padding:1.25rem 1.5rem 0;">
-      <h3>🔒 Función de pago</h3>
+      <h3 id="unlockModalTitleExp">🔒 Función de pago</h3>
       <p id="unlockReasonText">Exportar esta clase requiere una clave de activación</p>
     </div>
     <div class="modal-body" style="padding:0 1.5rem;">
@@ -439,8 +439,10 @@ document.getElementById('headerClass').textContent   = cls ? cls.name : 'Clase';
 
 function getKey(type) { return `${KEY_PREFIX}_${type}`; }
 
-// ── Límite de la versión gratuita: máximo de ítems por sección ──────
-const MAX_ITEMS_PER_TYPE = 2; // contenido / glosario / cuestionario, por clase
+// ── Límite de la versión gratuita: máximo de ítems combinados ──────
+// Ya no es "máximo 2 por tipo": es máximo 2 EN TOTAL sumando
+// contenido + glosario + cuestionario juntos, por clase.
+const MAX_ITEMS_PER_TYPE = 2;
 
 // ── Sistema multi-item (Contenido, Glosario, Cuestionario) ─────────
 // Cada tipo tiene un índice: KEY_PREFIX_{type}s_index → [{ id, name, detectedType? }]
@@ -459,6 +461,12 @@ const MULTI_DOM = {
 function getIndexKey(type) { return `${KEY_PREFIX}_${type}s_index`; }
 function loadIndex(type) { try { return JSON.parse(localStorage.getItem(getIndexKey(type)) || '[]'); } catch { return []; } }
 function saveIndex(type, arr) { localStorage.setItem(getIndexKey(type), JSON.stringify(arr)); }
+
+// Cuenta los ítems combinando los tres tipos (contenido + glosario + cuestionario).
+// El límite gratuito aplica sobre esta suma total, no por tipo individual.
+function getTotalMultiItemsCount() {
+  return Object.keys(MULTI_CFG).reduce((sum, t) => sum + loadIndex(t).length, 0);
+}
 
 // Migra datos antiguos (un solo glosario/cuestionario por clase) al nuevo formato de lista,
 // la primera vez que se abre la clase tras la actualización.
@@ -1042,9 +1050,9 @@ const TITLES = {
 async function openLoaderMulti(type) {
   await initDevUnlock();
   const list = loadIndex(type);
-  if (!_unlocked && list.length >= MAX_ITEMS_PER_TYPE) {
-    requireUnlock(() => openLoaderMulti(type),
-      `🔒 Límite gratuito: máximo ${MAX_ITEMS_PER_TYPE} ${MULTI_CFG[type].label.toLowerCase()}s por clase. Ingresa tu clave para agregar más.`);
+  if (!_unlockedImport && getTotalMultiItemsCount() >= MAX_ITEMS_PER_TYPE) {
+    requireUnlock('import', () => openLoaderMulti(type),
+      `🔒 Límite gratuito: máximo ${MAX_ITEMS_PER_TYPE} ítems en total (entre contenido, glosario y cuestionario) por clase. Ingresa tu clave para agregar más.`);
     return;
   }
   currentType    = type;
@@ -1089,8 +1097,14 @@ function closeLoader() { closeModal('modalLoader'); currentType = null; }
 
 // ════════════════════════════════════════════════════════════════
 // SISTEMA DE CLAVE — dual: app (huella) o navegador (tiempo)
+// Dos claves INDEPENDIENTES (mismo mecanismo, distinta sal):
+//   • Clave de Importación/Creación → agregar nuevos ítems más allá
+//     del límite gratuito (botón "Agregar" en este loader).
+//   • Clave de Exportación          → exportar la clase, copiar la
+//     plantilla JSON de ejemplo y pegar JSON en este loader.
 // ════════════════════════════════════════════════════════════════
-const _SALT = 'EST2025XZ'; // sal interna, no visible para el usuario
+const _SALT_IMPORT = 'EST2025XZ-IMP';
+const _SALT_EXPORT = 'EST2025XZ-EXP';
 
 // Detecta si corre como app Cordova/APK o como navegador normal
 function isApp() {
@@ -1103,7 +1117,6 @@ function isBrowser() { return !isApp(); }
 
 // ── Modo APP: huella de dispositivo ──────────────────────────────
 let _deviceFp = null;
-let _devUnlocked = false;
 
 async function getDeviceFingerprint() {
   const parts = [
@@ -1127,10 +1140,10 @@ async function getDeviceFingerprint() {
   }
 }
 
-async function computeDeviceKey(fp) {
-  const base = fp.replace(/-/g,'').substring(0,16) + _SALT;
+async function computeDeviceKey(fp, salt) {
+  const base = fp.replace(/-/g,'').substring(0,16) + salt;
   if (crypto.subtle) {
-    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(_SALT),
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(salt),
       {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', km, new TextEncoder().encode(fp.replace(/-/g,'').substring(0,16)));
     const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
@@ -1163,14 +1176,14 @@ function simpleHash(str) {
   return (h>>>0).toString(16).padStart(8,'0').toUpperCase();
 }
 
-function computeTimeKey(block) {
-  const raw = _SALT + block;
+function computeTimeKey(block, salt) {
+  const raw = salt + block;
   const hex = simpleHash(raw);
   return hex.substring(0,4)+'-'+hex.substring(4,8);
 }
 
 // También acepta el bloque anterior (por si el admin dio la clave justo al cambiar)
-function validTimeKeys() {
+function validTimeKeys(salt) {
   const now = currentTimeBlock();
   const prev = (() => {
     const n = new Date(Date.now() - 5*60*1000);
@@ -1179,19 +1192,31 @@ function validTimeKeys() {
           B=String(Math.floor(n.getMinutes()/5)).padStart(2,'0');
     return `${Y}${M}${D}${H}${B}`;
   })();
-  return [computeTimeKey(now), computeTimeKey(prev)];
+  return [computeTimeKey(now, salt), computeTimeKey(prev, salt)];
 }
 
-// ── Estado de desbloqueo ─────────────────────────────────────────
-let _unlocked = false;
+// ── Estado de desbloqueo (dos claves independientes) ──────────────
+let _unlockedImport = false; // agregar ítems más allá del límite gratuito
+let _unlockedExport = false; // exportar / copiar plantilla / pegar JSON
 let _unlockMode = 'browser'; // 'browser' | 'app'
+let _unlockPurpose = 'export'; // qué clave pide el modal emergente ahora: 'import' | 'export'
+let _pendingUnlockAction = null;
 
+function isUnlocked(purpose) { return purpose === 'import' ? _unlockedImport : _unlockedExport; }
+
+const PURPOSE_LABEL = {
+  import: { title: '🔒 Clave de importación', locked: '🔒 Clave de importación', default: 'Esta acción requiere una clave de importación/creación.' },
+  export: { title: '🔒 Clave de exportación',  locked: '🔒 Clave de exportación',  default: 'Exportar esta clase requiere una clave de activación' }
+};
+
+// Barra inline (dentro del loader): siempre rige la clave de EXPORTACIÓN,
+// porque gatilla "Pegar JSON" y "Copiar plantilla".
 function applyUnlockState() {
   const bar = document.getElementById('unlockBar');
   if (!bar) return;
   bar.style.display = 'block';
 
-  if (_unlocked) {
+  if (_unlockedExport) {
     bar.classList.add('unlocked');
     document.getElementById('unlockBarTitle').textContent = '✅ Funciones activas';
     document.getElementById('unlockInputArea').style.display = 'none';
@@ -1209,7 +1234,7 @@ function applyUnlockState() {
     document.getElementById('templateBtnUnlocked').style.display = 'block';
   } else {
     bar.classList.remove('unlocked');
-    document.getElementById('unlockBarTitle').textContent = '🔒 Funciones de pago';
+    document.getElementById('unlockBarTitle').textContent = '🔒 Clave de exportación';
     document.getElementById('unlockInputArea').style.display = 'block';
     document.getElementById('unlockActive').style.display = 'none';
     if (_unlockMode === 'app') {
@@ -1229,13 +1254,16 @@ function applyUnlockState() {
   applyExportUnlockState();
 }
 
-// ── Réplica del estado de clave para el modal de Exportar ────────
-let _pendingUnlockAction = null;
-
+// ── Modal emergente: usado tanto para el límite de ítems gratuitos
+//    (clave de importación) como para exportar (clave de exportación),
+//    según `_unlockPurpose`. ────────────────────────────────────────
 function applyExportUnlockState() {
   const bar = document.getElementById('unlockBarExp');
   if (!bar) return;
-  if (_unlocked) {
+  const unlocked = isUnlocked(_unlockPurpose);
+  const titleEl = document.getElementById('unlockModalTitleExp');
+  if (titleEl) titleEl.textContent = PURPOSE_LABEL[_unlockPurpose].title;
+  if (unlocked) {
     bar.classList.add('unlocked');
     document.getElementById('unlockBarTitleExp').textContent = '✅ Funciones activas';
     document.getElementById('unlockInputAreaExp').style.display = 'none';
@@ -1247,7 +1275,7 @@ function applyExportUnlockState() {
       _unlockMode === 'app' ? 'en este dispositivo' : 'para esta sesión';
   } else {
     bar.classList.remove('unlocked');
-    document.getElementById('unlockBarTitleExp').textContent = '🔒 Función de pago';
+    document.getElementById('unlockBarTitleExp').textContent = PURPOSE_LABEL[_unlockPurpose].locked;
     document.getElementById('unlockInputAreaExp').style.display = 'block';
     document.getElementById('unlockActiveExp').style.display = 'none';
     if (_unlockMode === 'app') {
@@ -1278,21 +1306,23 @@ async function tryUnlockExp() {
   const entered = (document.getElementById('unlockKeyInputExp').value||'').trim().toUpperCase();
   if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
 
+  const salt = _unlockPurpose === 'import' ? _SALT_IMPORT : _SALT_EXPORT;
   let valid = false;
   if (_unlockMode === 'app') {
     if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
-    const expected = await computeDeviceKey(_deviceFp);
+    const expected = await computeDeviceKey(_deviceFp, salt);
     valid = (entered === expected);
-    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+    if (valid) localStorage.setItem(_unlockPurpose === 'import' ? 'study_devkey_unlock_import' : 'study_devkey_unlock_export', _deviceFp);
   } else {
-    const keys = validTimeKeys();
+    const keys = validTimeKeys(salt);
     valid = keys.includes(entered);
-    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+    if (valid) sessionStorage.setItem(_unlockPurpose === 'import' ? 'study_session_unlock_import' : 'study_session_unlock_export', 'true');
   }
 
   if (valid) {
-    _unlocked = true;
-    applyUnlockState();
+    if (_unlockPurpose === 'import') _unlockedImport = true; else _unlockedExport = true;
+    applyExportUnlockState();
+    applyUnlockState(); // refresca también la barra inline (pegar/plantilla) si aplica
     showToast('✅ Funciones desbloqueadas');
     closeModal('modalUnlockExport');
     if (_pendingUnlockAction) { const fn = _pendingUnlockAction; _pendingUnlockAction = null; fn(); }
@@ -1305,17 +1335,18 @@ async function tryUnlockExp() {
   }
 }
 
-// Punto de entrada: exige clave activa antes de ejecutar `action`.
-// Si ya está desbloqueado (mismo mecanismo que copiar/pegar JSON), ejecuta de inmediato.
-async function requireUnlock(action, reason) {
-  await initDevUnlock(); // refresca estado por si se desbloqueó desde el modal de Cargar JSON
-  if (_unlocked) { action(); return; }
+// Punto de entrada: exige clave activa del tipo `purpose` ('import' | 'export') antes de ejecutar `action`.
+async function requireUnlock(purpose, action, reason) {
+  _unlockPurpose = purpose === 'import' ? 'import' : 'export';
+  await initDevUnlock(); // refresca estado por si se desbloqueó desde otra pantalla
+  if (isUnlocked(_unlockPurpose)) { action(); return; }
   _pendingUnlockAction = action;
   const reasonEl = document.getElementById('unlockReasonText');
-  if (reasonEl) reasonEl.textContent = reason || 'Exportar esta clase requiere una clave de activación';
+  if (reasonEl) reasonEl.textContent = reason || PURPOSE_LABEL[_unlockPurpose].default;
   const inp = document.getElementById('unlockKeyInputExp');
   inp.value = ''; inp.className = 'unlock-input';
   document.getElementById('unlockFbExp').textContent = '';
+  applyExportUnlockState();
   openModal('modalUnlockExport');
 }
 
@@ -1327,13 +1358,15 @@ async function initDevUnlock() {
     _deviceFp = await getDeviceFingerprint();
     const el = document.getElementById('devCodeDisplay');
     if (el) el.textContent = _deviceFp;
-    // Verificar si ya fue desbloqueado permanentemente
-    const saved = localStorage.getItem('study_devkey_unlock');
-    if (saved === _deviceFp) { _unlocked = true; }
+    const elExp = document.getElementById('devCodeDisplayExp');
+    if (elExp) elExp.textContent = _deviceFp;
+    // Verificar si ya fue desbloqueado permanentemente (cada clave por separado)
+    if (localStorage.getItem('study_devkey_unlock_import') === _deviceFp) _unlockedImport = true;
+    if (localStorage.getItem('study_devkey_unlock_export') === _deviceFp) _unlockedExport = true;
   } else {
     // Navegador: nunca se guarda permanentemente, solo sesión
-    const sess = sessionStorage.getItem('study_session_unlock');
-    if (sess === 'true') { _unlocked = true; }
+    if (sessionStorage.getItem('study_session_unlock_import') === 'true') _unlockedImport = true;
+    if (sessionStorage.getItem('study_session_unlock_export') === 'true') _unlockedExport = true;
   }
   applyUnlockState();
 }
@@ -1366,6 +1399,7 @@ function onUnlockInput() {
   }
 }
 
+// Barra inline: siempre valida contra la clave de EXPORTACIÓN.
 async function tryUnlock() {
   const entered = (document.getElementById('unlockKeyInput').value||'').trim().toUpperCase();
   if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
@@ -1374,18 +1408,18 @@ async function tryUnlock() {
 
   if (_unlockMode === 'app') {
     if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
-    const expected = await computeDeviceKey(_deviceFp);
+    const expected = await computeDeviceKey(_deviceFp, _SALT_EXPORT);
     valid = (entered === expected);
-    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+    if (valid) localStorage.setItem('study_devkey_unlock_export', _deviceFp);
   } else {
     // Navegador: verificar contra ventanas de tiempo actuales
-    const keys = validTimeKeys();
+    const keys = validTimeKeys(_SALT_EXPORT);
     valid = keys.includes(entered);
-    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+    if (valid) sessionStorage.setItem('study_session_unlock_export', 'true');
   }
 
   if (valid) {
-    _unlocked = true;
+    _unlockedExport = true;
     applyUnlockState();
     showToast('✅ Funciones desbloqueadas');
   } else {
@@ -1464,7 +1498,7 @@ function saveLoader() {
     if (!parsedFileData) { showToast('⚠️ Selecciona un archivo JSON válido primero'); return; }
     data = parsedFileData;
   } else {
-    if (!_unlocked) { showToast('🔒 Activa tu clave para usar esta función'); return; }
+    if (!_unlockedExport) { showToast('🔒 Activa tu clave de exportación para usar esta función'); return; }
     if (!pasteValid) { showToast('⚠️ El JSON pegado no es válido'); return; }
     data = JSON.parse(document.getElementById('pasteArea').value.trim());
   }
@@ -1535,7 +1569,7 @@ function openSection(type) {
 }
 
 function exportClass() {
-  requireUnlock(() => {
+  requireUnlock('export', () => {
     const sExp = { id: subjectId, name: subject ? subject.name : subjectId, icon: subject?.icon || '📘', color: subject?.color || '#4f46e5', classes: [] };
     const clsExp = { id: classId, name: cls ? cls.name : classId, data: {} };
     // Tematización: dato único por clase

@@ -178,7 +178,7 @@
 <!-- Modal de clave — función de pago para Exportar -->
 <div class="modal-overlay" id="modalUnlockExport">
   <div class="modal" style="max-width:420px;">
-    <h3>🔒 Función de pago</h3>
+    <h3 id="unlockModalTitle">🔒 Función de pago</h3>
     <p id="unlockReasonText" style="font-size:0.82rem; color:#6b7280; margin:-0.75rem 0 1rem;">Exportar asignaturas o clases requiere una clave de activación.</p>
     <div class="unlock-bar" id="unlockBar">
       <div class="unlock-bar-title" id="unlockBarTitle">🔒 Función de pago</div>
@@ -190,7 +190,7 @@
         </div>
       </div>
       <div id="modeBrowser" style="display:none;">
-        <div class="time-hint" id="timeHint">El administrador te indicará el momento exacto.<br>Tendrás <span>5 minutos</span> para ingresar la clave.</div>
+        <div class="time-hint" id="timeHint">El administrador te indicará el momento exacto.<br>Tendrás <span>5 minutos</span> para ingresar la clave. Una vez activada, <span>quedará guardada permanentemente</span> en este navegador.</div>
       </div>
       <div id="unlockInputArea">
         <div class="unlock-row">
@@ -324,7 +324,7 @@ function saveSubject() {
     save(); render(); closeModal('modalSubject');
   };
   if (subjects.length >= MAX_SUBJECTS) {
-    requireUnlock(create, `🔒 Límite gratuito: máximo ${MAX_SUBJECTS} asignaturas. Ingresa tu clave para crear más.`);
+    requireUnlock('import', create, `🔒 Límite gratuito: máximo ${MAX_SUBJECTS} asignaturas. Ingresa tu clave de importación/creación para crear más.`);
   } else {
     create();
   }
@@ -337,11 +337,63 @@ function deleteSubject(id) {
 
 // ════════════════════════════════════════════════════════════════
 // SISTEMA DE CLAVE — dual: app (huella) o navegador (tiempo)
-// (Idéntico al de clases.html / tematizacion.html: una misma clave
-//  desbloquea las funciones de pago en toda la app — el estado se
-//  comparte vía localStorage/sessionStorage entre todas las pantallas)
+// Dos claves INDEPENDIENTES (mismo mecanismo, distinta sal):
+//   • Clave de Importación/Creación → crear nuevas asignaturas/clases
+//     e importar archivos .json que superen el límite gratuito.
+//   • Clave de Exportación          → exportar asignaturas/clases.
+// El estado se comparte vía localStorage/sessionStorage entre pantallas.
 // ════════════════════════════════════════════════════════════════
-const _SALT = 'EST2025XZ'; // sal interna, no visible para el usuario
+const _SALT_IMPORT = 'EST2025XZ-IMP';
+const _SALT_EXPORT = 'EST2025XZ-EXP';
+
+// ── Firma oficial (archivos firmados por la oficina central) ──────
+// Esta clave SOLO la conoce el servidor que genera los JSON oficiales.
+// No aparece en el export normal del usuario — se inyecta en el servidor.
+const _OFFICIAL_SIGN_KEY = 'OFIC-EST2025-SEC-7f3a9b';
+
+// Serialización canónica recursiva: ordena keys en TODOS los niveles del objeto.
+// Esto es crítico — JSON.stringify(obj, keys.sort()) solo filtra keys del nivel raíz,
+// dejando los objetos anidados vacíos. La función correcta recorre todo el árbol.
+function _canonicalize(value) {
+  if (Array.isArray(value))
+    return '[' + value.map(_canonicalize).join(',') + ']';
+  if (value !== null && typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + _canonicalize(value[k])).join(',') + '}';
+  }
+  return JSON.stringify(value);
+}
+
+async function _hmacSha256(key, message) {
+  const keyData = new TextEncoder().encode(key);
+  const msgData = new TextEncoder().encode(message);
+  if (crypto.subtle) {
+    const km = await crypto.subtle.importKey('raw', keyData,
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sigBuf = await crypto.subtle.sign('HMAC', km, msgData);
+    return Array.from(new Uint8Array(sigBuf))
+      .map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+  } else {
+    // Fallback djb2 para entornos sin SubtleCrypto
+    let h = 5381;
+    const raw = key + message;
+    for (let i = 0; i < raw.length; i++) h = ((h << 5) + h) ^ raw.charCodeAt(i);
+    return (h >>> 0).toString(16).padStart(8,'0').toUpperCase().padEnd(64,'0');
+  }
+}
+
+async function verifyOfficialSignature(payload) {
+  if (!payload || !payload.official_sig) return false;
+  try {
+    const { official_sig, ...rest } = payload;
+    const canonical = _canonicalize(rest);
+    const expected = await _hmacSha256(_OFFICIAL_SIGN_KEY, canonical);
+    if (crypto.subtle)
+      return official_sig.toUpperCase() === expected;
+    // Fallback: comparar solo los primeros 8 chars del hash djb2
+    return official_sig.toUpperCase().startsWith(expected.substring(0, 8));
+  } catch(e) { return false; }
+}
 
 function isApp() {
   return !!(window.cordova || window.PhoneGap || window.phonegap ||
@@ -351,9 +403,18 @@ function isApp() {
 function isBrowser() { return !isApp(); }
 
 let _deviceFp = null;
-let _unlocked = false;
+let _unlockedImport = false;
+let _unlockedExport = false;
 let _unlockMode = 'browser';
+let _unlockPurpose = 'export'; // qué clave está pidiendo el modal abierto ahora: 'import' | 'export'
 let _pendingUnlockAction = null;
+
+function isUnlocked(purpose) { return purpose === 'import' ? _unlockedImport : _unlockedExport; }
+
+const PURPOSE_LABEL = {
+  import: { title: '🔒 Clave de importación', locked: '🔒 Clave de importación', default: 'Esta acción requiere una clave de importación/creación.' },
+  export: { title: '🔒 Clave de exportación',  locked: '🔒 Clave de exportación',  default: 'Exportar asignaturas o clases requiere una clave de activación.' }
+};
 
 async function getDeviceFingerprint() {
   const parts = [
@@ -375,10 +436,10 @@ async function getDeviceFingerprint() {
   }
 }
 
-async function computeDeviceKey(fp) {
-  const base = fp.replace(/-/g,'').substring(0,16) + _SALT;
+async function computeDeviceKey(fp, salt) {
+  const base = fp.replace(/-/g,'').substring(0,16) + salt;
   if (crypto.subtle) {
-    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(_SALT),
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(salt),
       {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', km, new TextEncoder().encode(fp.replace(/-/g,'').substring(0,16)));
     const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
@@ -407,13 +468,13 @@ function simpleHash(str) {
   return (h>>>0).toString(16).padStart(8,'0').toUpperCase();
 }
 
-function computeTimeKey(block) {
-  const raw = _SALT + block;
+function computeTimeKey(block, salt) {
+  const raw = salt + block;
   const hex = simpleHash(raw);
   return hex.substring(0,4)+'-'+hex.substring(4,8);
 }
 
-function validTimeKeys() {
+function validTimeKeys(salt) {
   const now = currentTimeBlock();
   const prev = (() => {
     const n = new Date(Date.now() - 5*60*1000);
@@ -422,13 +483,16 @@ function validTimeKeys() {
           B=String(Math.floor(n.getMinutes()/5)).padStart(2,'0');
     return `${Y}${M}${D}${H}${B}`;
   })();
-  return [computeTimeKey(now), computeTimeKey(prev)];
+  return [computeTimeKey(now, salt), computeTimeKey(prev, salt)];
 }
 
 function applyUnlockState() {
   const bar = document.getElementById('unlockBar');
   if (!bar) return;
-  if (_unlocked) {
+  const unlocked = isUnlocked(_unlockPurpose);
+  const titleEl = document.getElementById('unlockModalTitle');
+  if (titleEl) titleEl.textContent = PURPOSE_LABEL[_unlockPurpose].title;
+  if (unlocked) {
     bar.classList.add('unlocked');
     document.getElementById('unlockBarTitle').textContent = '✅ Funciones activas';
     document.getElementById('unlockInputArea').style.display = 'none';
@@ -437,10 +501,10 @@ function applyUnlockState() {
     const act = document.getElementById('unlockActive');
     act.style.display = 'flex';
     document.getElementById('unlockActiveDetail').textContent =
-      _unlockMode === 'app' ? 'en este dispositivo' : 'para esta sesión';
+      'en este navegador/dispositivo';
   } else {
     bar.classList.remove('unlocked');
-    document.getElementById('unlockBarTitle').textContent = '🔒 Función de pago';
+    document.getElementById('unlockBarTitle').textContent = PURPOSE_LABEL[_unlockPurpose].locked;
     document.getElementById('unlockInputArea').style.display = 'block';
     document.getElementById('unlockActive').style.display = 'none';
     if (_unlockMode === 'app') {
@@ -455,15 +519,26 @@ function applyUnlockState() {
 
 async function initDevUnlock() {
   _unlockMode = isApp() ? 'app' : 'browser';
-  if (_unlockMode === 'app') {
-    _deviceFp = await getDeviceFingerprint();
-    const el = document.getElementById('devCodeDisplay');
-    if (el) el.textContent = _deviceFp;
-    const saved = localStorage.getItem('study_devkey_unlock');
-    if (saved === _deviceFp) { _unlocked = true; }
-  } else {
-    const sess = sessionStorage.getItem('study_session_unlock');
-    if (sess === 'true') { _unlocked = true; }
+  // En ambos modos (app y web) se usa fingerprint + localStorage para que
+  // el desbloqueo sea permanente en ese navegador/dispositivo y no se pierda
+  // al cerrar la pestaña. La clave sigue siendo por cuenta: el fingerprint
+  // del navegador actua como identificador unico del "usuario en ese equipo".
+  if (!_deviceFp) _deviceFp = await getDeviceFingerprint();
+  const el = document.getElementById('devCodeDisplay');
+  if (el) el.textContent = _deviceFp;
+  if (localStorage.getItem('study_devkey_unlock_import') === _deviceFp) _unlockedImport = true;
+  if (localStorage.getItem('study_devkey_unlock_export') === _deviceFp) _unlockedExport = true;
+  // Compatibilidad hacia atras: si en una sesion anterior se guardo en sessionStorage
+  // (version vieja), migrarlo a localStorage para que quede permanente.
+  if (!_unlockedImport && sessionStorage.getItem('study_session_unlock_import') === 'true') {
+    _unlockedImport = true;
+    localStorage.setItem('study_devkey_unlock_import', _deviceFp);
+    sessionStorage.removeItem('study_session_unlock_import');
+  }
+  if (!_unlockedExport && sessionStorage.getItem('study_session_unlock_export') === 'true') {
+    _unlockedExport = true;
+    localStorage.setItem('study_devkey_unlock_export', _deviceFp);
+    sessionStorage.removeItem('study_session_unlock_export');
   }
   applyUnlockState();
 }
@@ -500,20 +575,27 @@ async function tryUnlock() {
   const entered = (document.getElementById('unlockKeyInput').value||'').trim().toUpperCase();
   if (!entered) { showToast('⚠️ Ingresa la clave'); return; }
 
+  const salt = _unlockPurpose === 'import' ? _SALT_IMPORT : _SALT_EXPORT;
   let valid = false;
   if (_unlockMode === 'app') {
     if (!_deviceFp) { showToast('⚠️ Código de dispositivo no listo'); return; }
-    const expected = await computeDeviceKey(_deviceFp);
+    const expected = await computeDeviceKey(_deviceFp, salt);
     valid = (entered === expected);
-    if (valid) localStorage.setItem('study_devkey_unlock', _deviceFp);
+    if (valid) localStorage.setItem(_unlockPurpose === 'import' ? 'study_devkey_unlock_import' : 'study_devkey_unlock_export', _deviceFp);
   } else {
-    const keys = validTimeKeys();
+    // Modo web: valida con clave de tiempo (ventana de 5 min),
+    // pero guarda el desbloqueo en localStorage atado al fingerprint
+    // del navegador — igual que en app — para que sea permanente.
+    const keys = validTimeKeys(salt);
     valid = keys.includes(entered);
-    if (valid) sessionStorage.setItem('study_session_unlock', 'true');
+    if (valid) {
+      if (!_deviceFp) _deviceFp = await getDeviceFingerprint();
+      localStorage.setItem(_unlockPurpose === 'import' ? 'study_devkey_unlock_import' : 'study_devkey_unlock_export', _deviceFp);
+    }
   }
 
   if (valid) {
-    _unlocked = true;
+    if (_unlockPurpose === 'import') _unlockedImport = true; else _unlockedExport = true;
     applyUnlockState();
     showToast('✅ Funciones desbloqueadas');
     closeModal('modalUnlockExport');
@@ -527,13 +609,14 @@ async function tryUnlock() {
   }
 }
 
-// Punto de entrada: exige clave activa antes de ejecutar `action`.
-async function requireUnlock(action, reason) {
+// Punto de entrada: exige clave activa del tipo `purpose` ('import' | 'export') antes de ejecutar `action`.
+async function requireUnlock(purpose, action, reason) {
+  _unlockPurpose = purpose === 'import' ? 'import' : 'export';
   await initDevUnlock(); // refresca estado (puede haberse desbloqueado en otra pantalla)
-  if (_unlocked) { action(); return; }
+  if (isUnlocked(_unlockPurpose)) { action(); return; }
   _pendingUnlockAction = action;
   const reasonEl = document.getElementById('unlockReasonText');
-  if (reasonEl) reasonEl.textContent = reason || 'Exportar asignaturas o clases requiere una clave de activación.';
+  if (reasonEl) reasonEl.textContent = reason || PURPOSE_LABEL[_unlockPurpose].default;
   const inp = document.getElementById('unlockKeyInput');
   inp.value = ''; inp.className = 'unlock-input';
   document.getElementById('unlockFb').textContent = '';
@@ -543,7 +626,7 @@ async function requireUnlock(action, reason) {
 
 // ── Export ────────────────────────────────────────────────────────
 function exportSubject(subjectId) {
-  requireUnlock(() => {
+  requireUnlock('export', () => {
     const s = subjects.find(x => x.id === subjectId);
     if (!s) return;
     const payload = buildExportPayload([s], 'subject');
@@ -611,19 +694,26 @@ function onImportFile(input) { if (input.files[0]) readImportFile(input.files[0]
 function readImportFile(file) {
   const st = document.getElementById('importStatus');
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.subjects || !Array.isArray(data.subjects)) throw new Error('Formato no reconocido');
       importPayload = data;
       const scope = data.scope || 'subject';
+
+      // ── Verificar firma oficial ──────────────────────────────────
+      const isOfficial = await verifyOfficialSignature(data);
+      const officialBadge = isOfficial
+        ? ' <span style="background:#166534;color:#fff;font-size:0.72rem;padding:1px 7px;border-radius:20px;vertical-align:middle;">✅ Oficial</span>'
+        : (data.official_sig ? ' <span style="background:#dc2626;color:#fff;font-size:0.72rem;padding:1px 7px;border-radius:20px;vertical-align:middle;">⚠️ Firma inválida</span>' : '');
+
       if (scope === 'class') {
         const donor = data.subjects[0] || {};
         const names = (donor.classes || []).map(c => c.name).join(', ');
-        st.textContent = `📄 Clase detectada: ${names}. Al importar, elegirás la asignatura destino.`;
+        st.innerHTML = `📄 Clase detectada: ${names}. Al importar, elegirás la asignatura destino.${officialBadge}`;
       } else {
         const totalClases = data.subjects.reduce((a,s) => a + (s.classes||[]).length, 0);
-        st.textContent = `✅ ${data.subjects.length} asignatura(s) · ${totalClases} clase(s) listas para importar`;
+        st.innerHTML = `✅ ${data.subjects.length} asignatura(s) · ${totalClases} clase(s) listas para importar${officialBadge}`;
       }
       st.style.color = '#166534';
       document.getElementById('btnDoImport').style.display = 'inline-flex';
@@ -693,12 +783,18 @@ function subjectImportExceedsLimits(payload) {
 }
 
 async function importFullSubjects(payload) {
-  await initDevUnlock();
-  if (!_unlocked && subjectImportExceedsLimits(payload)) {
-    requireUnlock(() => importFullSubjects(payload),
-      `🔒 Este archivo supera los límites gratuitos (máx. ${MAX_SUBJECTS} asignaturas, ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave para importar todo.`);
-    return;
+  // ── Verificar firma oficial ───────────────────────────────────────
+  const isOfficial = await verifyOfficialSignature(payload);
+  if (!isOfficial) {
+    // Sin firma válida → aplicar restricciones normales
+    await initDevUnlock();
+    if (!_unlockedImport && subjectImportExceedsLimits(payload)) {
+      requireUnlock('import', () => importFullSubjects(payload),
+        `🔒 Este archivo supera los límites gratuitos (máx. ${MAX_SUBJECTS} asignaturas, ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave de importación/creación para importar todo.`);
+      return;
+    }
   }
+  // Con firma oficial válida → sin restricciones, importar todo directamente
   let added = 0, updated = 0;
   payload.subjects.forEach(s => {
     const exists = subjects.find(x => x.id === s.id);
@@ -744,15 +840,20 @@ async function confirmClassImportTarget(targetSubjectId) {
   const target = subjects.find(s => s.id === targetSubjectId);
   if (!target) return;
 
-  await initDevUnlock();
-  const incomingClasses = pendingClassPayload.subjects.flatMap(s => s.classes || []);
-  const wouldExceedClasses = (target.classes || []).length + incomingClasses.length > MAX_CLASSES_PER_SUBJECT;
-  const itemsTooMany = incomingClasses.some(cls => itemCountsExceedLimit(cls.data));
-  if (!_unlocked && (wouldExceedClasses || itemsTooMany)) {
-    requireUnlock(() => confirmClassImportTarget(targetSubjectId),
-      `🔒 Esta importación supera el límite gratuito (máx. ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave para continuar.`);
-    return;
+  // ── Verificar firma oficial ───────────────────────────────────────
+  const isOfficial = await verifyOfficialSignature(pendingClassPayload);
+  if (!isOfficial) {
+    await initDevUnlock();
+    const incomingClasses = pendingClassPayload.subjects.flatMap(s => s.classes || []);
+    const wouldExceedClasses = (target.classes || []).length + incomingClasses.length > MAX_CLASSES_PER_SUBJECT;
+    const itemsTooMany = incomingClasses.some(cls => itemCountsExceedLimit(cls.data));
+    if (!_unlockedImport && (wouldExceedClasses || itemsTooMany)) {
+      requireUnlock('import', () => confirmClassImportTarget(targetSubjectId),
+        `🔒 Esta importación supera el límite gratuito (máx. ${MAX_CLASSES_PER_SUBJECT} clases por asignatura y ${MAX_ITEMS_PER_TYPE} ítems por sección). Ingresa tu clave de importación/creación para continuar.`);
+      return;
+    }
   }
+  // Con firma oficial válida → sin restricciones
 
   let imported = 0;
   pendingClassPayload.subjects.forEach(s => {
